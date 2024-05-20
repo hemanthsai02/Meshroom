@@ -149,7 +149,7 @@ RowLayout {
                         }
                     }
 
-                    onClicked: {
+                    onClicked: function(mouse) {
                         forceActiveFocus()
                         if (mouse.button == Qt.RightButton) {
                             var menu = menuComp.createObject(parameterLabel)
@@ -258,7 +258,7 @@ RowLayout {
                 DropArea {
                     enabled: root.editable
                     anchors.fill: parent
-                    onDropped: {
+                    onDropped: function(drop) {
                         if (drop.hasUrls)
                             setTextFieldAttribute(Filepath.urlToString(drop.urls[0]))
                         else if (drop.hasText && drop.text != '')

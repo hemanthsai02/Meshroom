@@ -425,8 +425,7 @@ ApplicationWindow {
     FileDialog {
         id: importImagesDialog
         title: "Import Images"
-        selectExisting: true
-        selectMultiple: true
+        fileMode: FileDialog.OpenFiles
         nameFilters: []
         onAccepted: {
             _reconstruction.importImagesUrls(importImagesDialog.fileUrls)
@@ -438,7 +437,7 @@ ApplicationWindow {
     FileDialog {
         id: importProjectDialog
         title: "Import Project"
-        selectMultiple: false
+        fileMode: FileDialog.OpenFile
         nameFilters: ["Meshroom Graphs (*.mg)"]
         onAccepted: {
             graphEditor.uigraph.importProject(importProjectDialog.fileUrl)

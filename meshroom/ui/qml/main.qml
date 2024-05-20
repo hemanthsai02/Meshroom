@@ -1078,6 +1078,7 @@ ApplicationWindow {
             TabPanel {
                 id: graphEditorPanel
                 Layout.fillWidth: true
+                SplitView.fillWidth: true
                 padding: 4
                 tabs: ["Graph Editor", "Task Manager"]
 
@@ -1270,6 +1271,7 @@ ApplicationWindow {
             NodeEditor {
                 id: nodeEditor
                 width: Math.round(parent.width * 0.3)
+                SplitView.preferredWidth: Math.round(parent.width * 0.3)
                 node: _reconstruction ? _reconstruction.selectedNode : null
                 property bool computing: _reconstruction ? _reconstruction.computing : false
                 // Make NodeEditor readOnly when computing

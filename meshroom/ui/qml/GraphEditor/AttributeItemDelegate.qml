@@ -195,33 +195,33 @@ RowLayout {
         sourceComponent: {
             switch (attribute.type) {
                 case "PushButtonParam":
-                    return pushButton_component
+                    return pushButtonComponent
                 case "ChoiceParam":
-                    return attribute.desc.exclusive ? comboBox_component : multiChoice_component
-                case "IntParam": return slider_component
+                    return attribute.desc.exclusive ? comboBoxComponent : multiChoiceComponent
+                case "IntParam": return sliderComponent
                 case "FloatParam":
                     if (attribute.desc.semantic === 'color/hue')
-                        return color_hue_component
-                    return slider_component
+                        return colorHueComponent
+                    return sliderComponent
                 case "BoolParam":
-                    return checkbox_component
+                    return checkboxComponent
                 case "ListAttribute":
-                    return listAttribute_component
+                    return listAttributeComponent
                 case "GroupAttribute":
-                    return groupAttribute_component
+                    return groupAttributeComponent
                 case "StringParam":
                     if (attribute.desc.semantic.includes('multiline'))
-                        return textArea_component
-                    return textField_component
+                        return textAreaComponent
+                    return textFieldComponent
                 case "ColorParam":
-                    return color_component
+                    return colorComponent
                 default:
-                    return textField_component
+                    return textFieldComponent
             }
         }
 
         Component {
-            id: pushButton_component
+            id: pushButtonComponent
             Button {
                 text: attribute.label
                 enabled: root.editable
@@ -232,7 +232,7 @@ RowLayout {
         }
 
         Component {
-            id: textField_component
+            id: textFieldComponent
             TextField {
                 id: textField
                 readOnly: !root.editable
@@ -323,7 +323,7 @@ RowLayout {
         }
 
         Component {
-            id: textArea_component
+            id: textAreaComponent
 
             Rectangle {
                 // Fixed background for the flickable object
@@ -374,17 +374,20 @@ RowLayout {
         }
 
         Component {
-            id: color_component
+            id: colorComponent
             RowLayout {
                 CheckBox {
-                    id: color_checkbox
+                    id: colorCheckbox
                     Layout.alignment: Qt.AlignLeft
                     checked: node && node.color === "" ? false : true
                     checkable: root.editable
                     text: "Custom Color"
                     onClicked: {
                         if (checked) {
-                            _reconstruction.setAttribute(attribute, "#0000FF")
+                            if (colorText.text == "")
+                                _reconstruction.setAttribute(attribute, "#0000FF")
+                            else
+                                _reconstruction.setAttribute(attribute, colorText.text)
                         } else {
                             _reconstruction.setAttribute(attribute, "")
                         }
@@ -394,9 +397,9 @@ RowLayout {
                     id: colorText
                     Layout.alignment: Qt.AlignLeft
                     implicitWidth: 100
-                    enabled: color_checkbox.checked && root.editable
-                    visible: color_checkbox.checked
-                    text: color_checkbox.checked ? attribute.value : ""
+                    enabled: colorCheckbox.checked && root.editable
+                    visible: colorCheckbox.checked
+                    text: colorCheckbox.checked ? attribute.value : ""
                     selectByMouse: true
                     onEditingFinished: setTextFieldAttribute(text)
                     onAccepted: setTextFieldAttribute(text)
@@ -410,8 +413,8 @@ RowLayout {
                     height: colorText.height
                     width: colorText.width / 2
                     Layout.alignment: Qt.AlignLeft
-                    visible: color_checkbox.checked
-                    color: color_checkbox.checked ? attribute.value : ""
+                    visible: colorCheckbox.checked
+                    color: colorCheckbox.checked ? colorDialog.selectedColor : ""
 
                     MouseArea {
                         enabled: root.editable
@@ -423,9 +426,9 @@ RowLayout {
                 ColorDialog {
                     id: colorDialog
                     title: "Please choose a color"
-                    selectedColor: attribute.value
+                    selectedColor: colorText.text
                     onAccepted: {
-                        colorText.text = color
+                        colorText.text = colorDialog.selectedColor
                         // Artificially trigger change of attribute value
                         colorText.editingFinished()
                         close()
@@ -440,7 +443,7 @@ RowLayout {
         }
 
         Component {
-            id: comboBox_component
+            id: comboBoxComponent
 
             FilterComboBox {
                 inputModel: attribute.values
@@ -482,10 +485,10 @@ RowLayout {
         }
 
         Component {
-            id: multiChoice_component
+            id: multiChoiceComponent
             Flow {
                 Repeater {
-                    id: checkbox_repeater
+                    id: checkboxRepeater
                     model: attribute.desc.values
                     delegate: CheckBox {
                         enabled: root.editable
@@ -506,7 +509,7 @@ RowLayout {
         }
 
         Component {
-            id: slider_component
+            id: sliderComponent
             RowLayout {
                 TextField {
                     IntValidator {
@@ -573,7 +576,7 @@ RowLayout {
         }
 
         Component {
-            id: checkbox_component
+            id: checkboxComponent
             Row {
                 CheckBox {
                     enabled: root.editable
@@ -584,17 +587,17 @@ RowLayout {
         }
 
         Component {
-            id: listAttribute_component
+            id: listAttributeComponent
             ColumnLayout {
-                id: listAttribute_layout
+                id: listAttributeLayout
                 width: parent.width
                 property bool expanded: false
                 RowLayout {
                     spacing: 4
                     ToolButton {
-                        text: listAttribute_layout.expanded  ? MaterialIcons.keyboard_arrow_down : MaterialIcons.keyboard_arrow_right
+                        text: listAttributeLayout.expanded  ? MaterialIcons.keyboard_arrow_down : MaterialIcons.keyboard_arrow_right
                         font.family: MaterialIcons.fontFamily
-                        onClicked: listAttribute_layout.expanded = !listAttribute_layout.expanded
+                        onClicked: listAttributeLayout.expanded = !listAttributeLayout.expanded
                     }
                     Label {
                         Layout.alignment: Qt.AlignVCenter
@@ -611,7 +614,7 @@ RowLayout {
                 }
                 ListView {
                     id: lv
-                    model: listAttribute_layout.expanded ? attribute.value : undefined
+                    model: listAttributeLayout.expanded ? attribute.value : undefined
                     visible: model !== undefined && count > 0
                     implicitHeight: Math.min(contentHeight, 300)
                     Layout.fillWidth: true
@@ -662,7 +665,7 @@ RowLayout {
         }
 
         Component {
-            id: groupAttribute_component
+            id: groupAttributeComponent
             ColumnLayout {
                 id: groupItem
                 Component.onCompleted:  {
@@ -682,7 +685,7 @@ RowLayout {
         }
 
         Component {
-            id: color_hue_component
+            id: colorHueComponent
             RowLayout {
                 TextField {
                     implicitWidth: 100

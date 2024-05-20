@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.11
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 import MaterialIcons 2.2
 import Controls 1.0
 
@@ -18,7 +18,7 @@ ColumnLayout {
     onChunksChanged: {
         // When the list changes, ensure the current index is in the new range
         if (currentIndex >= chunks.count)
-            currentIndex = chunks.count-1
+            currentIndex = chunks.count - 1
     }
 
     // chunksSummary is in sync with allChunks button (but not directly accessible as it is in a Component)

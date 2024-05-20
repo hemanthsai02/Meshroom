@@ -31,8 +31,8 @@ ApplicationWindow {
         return t
     }
 
-    onClosing: {
-        // make sure document is saved before exiting application
+    onClosing: function(close) {
+        // Make sure document is saved before exiting application
         close.accepted = false
         if (!ensureNotComputing())
             return
@@ -610,8 +610,8 @@ ApplicationWindow {
         text: "Load Template"
         onTriggered: {
             ensureSaved(function() {
-                initFileDialogFolder(loadTemplateDialog);
-                loadTemplateDialog.open();
+                initFileDialogFolder(loadTemplateDialog)
+                loadTemplateDialog.open()
             })
         }
     }
@@ -1230,15 +1230,15 @@ ApplicationWindow {
                     uigraph: _reconstruction
                     nodeTypesModel: _nodeTypes
 
-                    onNodeDoubleClicked: {
+                    onNodeDoubleClicked: function(mouse, node) {
                         _reconstruction.setActiveNode(node);
                         workspaceView.viewNode(node, mouse);
                     }
-                    onComputeRequest: {
+                    onComputeRequest: function(node) {
                         _reconstruction.forceNodesStatusUpdate();
                         computeManager.compute(node)
                     }
-                    onSubmitRequest: {
+                    onSubmitRequest: function(node) {
                         _reconstruction.forceNodesStatusUpdate();
                         computeManager.submit(node)
                     }

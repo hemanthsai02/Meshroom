@@ -217,6 +217,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.minimumWidth: 20
+                        SplitView.fillWidth: true
 
                         DropArea {
                             anchors.fill: parent

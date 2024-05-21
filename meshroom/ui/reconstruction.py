@@ -17,6 +17,7 @@ from meshroom.core import Version
 from meshroom.core.node import Node, CompatibilityNode, Status, Position
 from meshroom.ui.graph import UIGraph
 from meshroom.ui.utils import makeProperty
+from meshroom.core.plugin import install_plugin
 
 
 class Message(QObject):
@@ -395,6 +396,16 @@ class ActiveNode(QObject):
     nodeChanged = Signal()
     node = makeProperty(QObject, "_node", nodeChanged, resetOnDestroy=True)
 
+def prepareUrlLocalFile(url):
+    if isinstance(url, (QUrl)):
+        # depending how the QUrl has been initialized,
+        # toLocalFile() may return the local path or an empty string
+        localFile = url.toLocalFile()
+        if not localFile:
+            localFile = url.toString()
+    else:
+        localFile = url
+    return localFile
 
 class Reconstruction(UIGraph):
     """
@@ -536,15 +547,14 @@ class Reconstruction(UIGraph):
     @Slot(QUrl, result=bool)
     @Slot(QUrl, bool, bool, result=bool)
     def loadUrl(self, url, setupProjectFile=True, publishOutputs=False):
-        if isinstance(url, (QUrl)):
-            # depending how the QUrl has been initialized,
-            # toLocalFile() may return the local path or an empty string
-            localFile = url.toLocalFile()
-            if not localFile:
-                localFile = url.toString()
-        else:
-            localFile = url
+        localFile = prepareUrlLocalFile(url)
         return self.load(localFile, setupProjectFile, publishOutputs)
+
+
+    @Slot(QUrl, result=bool)
+    def installPlugin(self, url):
+        localFile = prepareUrlLocalFile(url)
+        return install_plugin(localFile)
 
     def onGraphChanged(self):
         """ React to the change of the internal graph. """
@@ -845,12 +855,7 @@ class Reconstruction(UIGraph):
     def importImagesUrls(self, imagePaths, recursive=False):
         paths = []
         for imagePath in imagePaths:
-            if isinstance(imagePath, (QUrl)):
-                p = imagePath.toLocalFile()
-                if not p:
-                    p = imagePath.toString()
-            else:
-                p = imagePath
+            p = prepareUrlLocalFile(imagePath)
             paths.append(p)
         self.importImagesFromFolder(paths)
 

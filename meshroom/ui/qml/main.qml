@@ -415,6 +415,41 @@ ApplicationWindow {
             graphEditor.uigraph.importProject(importProjectDialog.fileUrl)
         }
     }
+    // dialogs for plugins 
+    MessageDialog {
+        id: pluginInstalledDialog
+        title: "Plugin installed"
+        modal: true
+        canCopy: false
+        Label {
+            text: "Plugin installed, please restart meshroom for the changes to take effect"
+        }
+    }
+
+    MessageDialog {
+        id: pluginNotInstalledDialog
+        title: "Plugin not installed"
+        modal: true
+        canCopy: false
+        Label {
+            text: "Something went wrong, plugin not installed"
+        }
+    }
+
+    // plugin installation from path or url
+    FileDialog {
+        id: intallPluginDialog
+        title: "Install Plugin"
+        selectExisting: false
+        selectFolder: true
+        onAccepted: {
+            if (_reconstruction.installPlugin(intallPluginDialog.fileUrl)) {
+                pluginInstalledDialog.open()
+            } else { 
+                pluginNotInstalledDialog.open()
+            }
+        }
+    }
 
     AboutDialog {
         id: aboutDialog
@@ -785,6 +820,15 @@ ApplicationWindow {
                     onTriggered: {
                         initFileDialogFolder(importProjectDialog)
                         importProjectDialog.open()
+                    }
+                }
+
+                Action {
+                    id: installPluginAction
+                    text: "Install Plugin"
+                    onTriggered: {
+                        initFileDialogFolder(intallPluginDialog)
+                        intallPluginDialog.open()
                     }
                 }
 

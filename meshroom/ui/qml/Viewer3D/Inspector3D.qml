@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import MaterialIcons 2.2
-import Qt3D.Core 2.15
-import Qt3D.Render 2.15
+import Qt3D.Core 2.6
+import Qt3D.Render 2.6
 import QtQuick.Controls.Material 2.12
 import Controls 1.0
 import Utils 1.0

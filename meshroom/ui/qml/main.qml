@@ -2,12 +2,10 @@ import QtCore
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Window
 import QtQml.Models
-
-import Qt.labs.platform 1.0 as Platform
-import QtQuick.Dialogs
 
 import GraphEditor 1.0
 import MaterialIcons 2.2
@@ -140,7 +138,7 @@ ApplicationWindow {
             {
                 saveFileDialog.open()
                 function _callbackWrapper(rc) {
-                    if (rc === Platform.Dialog.Accepted)
+                    if (rc === Dialog.Accepted)
                         fireCallback()
                     saveFileDialog.closed.disconnect(_callbackWrapper)
                 }
@@ -165,40 +163,40 @@ ApplicationWindow {
         }
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: saveFileDialog
-        options: Platform.FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
 
         signal closed(var result)
 
         title: "Save File"
         nameFilters: ["Meshroom Graphs (*.mg)"]
         defaultSuffix: ".mg"
-        fileMode: Platform.FileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         onAccepted: {
-            _reconstruction.saveAs(currentFile)
-            closed(Platform.Dialog.Accepted)
-            MeshroomApp.addRecentProjectFile(currentFile.toString())
+            _reconstruction.saveAs(selectedFile)
+            closed(Dialog.Accepted)
+            MeshroomApp.addRecentProjectFile(selectedFile.toString())
         }
-        onRejected: closed(Platform.Dialog.Rejected)
+        onRejected: closed(Dialog.Rejected)
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: saveTemplateDialog
-        options: Platform.FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
 
         signal closed(var result)
 
         title: "Save Template"
         nameFilters: ["Meshroom Graphs (*.mg)"]
         defaultSuffix: ".mg"
-        fileMode: Platform.FileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         onAccepted: {
-            _reconstruction.saveAsTemplate(currentFile)
-            closed(Platform.Dialog.Accepted)
+            _reconstruction.saveAsTemplate(selectedFile)
+            closed(Dialog.Accepted)
             MeshroomApp.reloadTemplateList()
         }
-        onRejected: closed(Platform.Dialog.Rejected)
+        onRejected: closed(Dialog.Rejected)
     }
 
     Item {
@@ -398,52 +396,54 @@ ApplicationWindow {
         }
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: openFileDialog
-        options: Platform.FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
         title: "Open File"
         nameFilters: ["Meshroom Graphs (*.mg)"]
+        fileMode: FileDialog.OpenFile
         onAccepted: {
-            if (_reconstruction.loadUrl(currentFile)) {
-                MeshroomApp.addRecentProjectFile(currentFile.toString())
+            if (_reconstruction.loadUrl(selectedFile)) {
+                MeshroomApp.addRecentProjectFile(selectedFile.toString())
             }
         }
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: loadTemplateDialog
-        options: Platform.FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
         title: "Load Template"
         nameFilters: ["Meshroom Graphs (*.mg)"]
+        fileMode: FileDialog.OpenFile
         onAccepted: {
             // Open the template as a regular file
-            if (_reconstruction.loadUrl(currentFile, true, true)) {
-                MeshroomApp.addRecentProjectFile(currentFile.toString())
+            if (_reconstruction.loadUrl(selectedFile, true, true)) {
+                MeshroomApp.addRecentProjectFile(selectedFile.toString())
             }
         }
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: importImagesDialog
-        options: FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
         title: "Import Images"
-        fileMode: Platform.FileDialog.OpenFiles
+        fileMode: FileDialog.OpenFiles
         nameFilters: []
         onAccepted: {
-            _reconstruction.importImagesUrls(currentFiles)
-            imagesFolder = Filepath.dirname(currentFiles[0])
+            _reconstruction.importImagesUrls(importImagesDialog.selectedFiles)
+            imagesFolder = Filepath.dirname(importImagesDialog.selectedFiles[0])
             MeshroomApp.addRecentImportedImagesFolder(imagesFolder)
         }
     }
 
-    Platform.FileDialog {
+    FileDialog {
         id: importProjectDialog
-        options: FileDialog.DontUseNativeDialog
+        // options: FileDialog.DontUseNativeDialog
         title: "Import Project"
-        fileMode: Platform.FileDialog.OpenFile
+        fileMode: FileDialog.OpenFile
         nameFilters: ["Meshroom Graphs (*.mg)"]
         onAccepted: {
-            graphEditor.uigraph.importProject(currentFile)
+            graphEditor.uigraph.importProject(selectedFile)
         }
     }
 
@@ -649,7 +649,7 @@ ApplicationWindow {
             folder = imagesFolder
         }
 
-        dialog.folder = folder
+        dialog.currentFolder = folder
     }
 
     header: MenuBar {

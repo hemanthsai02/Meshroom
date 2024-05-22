@@ -406,6 +406,38 @@ ApplicationWindow {
         }
     }
 
+    Dialog {
+        id: pluginURLDialog
+        title: "Plugin URL"
+        height: 150
+        width: 300
+        standardButtons: StandardButton.Ok | StandardButton.Cancel
+        //focus: true  
+        Column {
+            anchors.fill: parent
+            Text {
+                text: "Plugin URL"
+                height: 40
+            }
+            TextField {
+                id: urlInput
+                width: parent.width * 0.75
+                focus: true
+            }
+        }
+        onButtonClicked: {
+        if (clickedButton==StandardButton.Ok) {
+            console.log("Accepted " + clickedButton)
+            if (_reconstruction.installPlugin(urlInput.text)) {
+                pluginInstalledDialog.open()
+            } else { 
+                pluginNotInstalledDialog.open()
+            }
+            } 
+        }
+    }
+    
+    //File browser for plugin
     FileDialog {
         id: importProjectDialog
         title: "Import Project"
@@ -824,13 +856,22 @@ ApplicationWindow {
                 }
 
                 Action {
-                    id: installPluginAction
-                    text: "Install Plugin"
+                    id: installPluginFromFolderAction
+                    text: "Install Plugin From Local Folder"
                     onTriggered: {
                         initFileDialogFolder(intallPluginDialog)
                         intallPluginDialog.open()
                     }
                 }
+
+                Action {
+                    id: installPluginFromURLAction
+                    text: "Install Plugin From URL"
+                    onTriggered: {
+                        pluginURLDialog.open()
+                    }
+                }
+
 
                 MenuItem {
                     action: removeImagesFromAllGroupsAction

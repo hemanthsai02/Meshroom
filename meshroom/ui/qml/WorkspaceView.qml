@@ -222,7 +222,8 @@ Item {
                         DropArea {
                             anchors.fill: parent
                             keys: ["text/uri-list"]
-                            onDropped: {
+
+                            onDropped: function(drop) {
                                 drop.urls.forEach(function(url) {
                                     load3DMedia(url)
                                 })

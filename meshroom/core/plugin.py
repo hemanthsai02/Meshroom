@@ -17,7 +17,7 @@ from meshroom.core import plugins_folder, defaultCacheFolder
 #FIXME: could replace with parsing to avoid dep
 import docker
 
-def install_plugin(plugin_url, run_all_build=False):
+def install_plugin(plugin_url):
     """
     Install plugin from an url or local path.
     Regardless of the method, the content will be copied in the plugin folder of meshroom (which is added to the list of directory to load nodes from).
@@ -31,20 +31,25 @@ def install_plugin(plugin_url, run_all_build=False):
     """
     logging.info("Installing plugin from "+plugin_url)
     try:
+        is_local = True
+
         #if url, clone the repo in cache
         if urllib.parse.urlparse(plugin_url).scheme in ('http', 'https','git'):
             os.chdir(defaultCacheFolder)
             os.system("git clone "+plugin_url)
+            plugin_name = plugin_url.split('.git')[0].split('/')[-1]
             plugin_url = os.path.join(defaultCacheFolder, plugin_name)
+            is_local = False
         
         if not os.path.isdir(plugin_url):
             ValueError("Invalid plugin path :"+plugin_url)
 
-        #get the name from folder
+        #get the plugin name from folder
         plugin_name = os.path.basename(plugin_url)
         #default node location
         nodesFolder = os.path.join(plugin_url, "meshroomNodes")
         #TODO: pipeline folder
+        # pipelineFolder = os.path.join(plugin_url, "meshroomPipelines")
 
         #load json for custom install
         if os.path.isfile(os.path.join(plugin_url, "meshroomPlugin.json")):
@@ -52,14 +57,13 @@ def install_plugin(plugin_url, run_all_build=False):
      
         logging.info("Installing "+plugin_name+" from "+plugin_url)
 
-        #copythe node folder in the plugin folder
-        # FIXME: symlink would be usefull for dev, but quid install from github in cache?
-        copy_tree(nodesFolder, os.path.join(plugins_folder, plugin_name))
+        #install via symlink if local, otherwise copy and delete the repo
+        if is_local:
+            os.symlink(nodesFolder, os.path.join(plugins_folder, plugin_name))
+        else:
+            copy_tree(nodesFolder, os.path.join(plugins_folder, plugin_name))
+            os.removedirs(plugin_url)
 
-        #load and build each node?
-        if run_all_build:
-            raise NotImplementedError("Prebuild not implemented yet")
-    
     except Exception as ex:
         logging.error(ex)
         return False

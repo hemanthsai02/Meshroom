@@ -50,6 +50,7 @@ class Status(Enum):
     STOPPED = 4
     KILLED = 5
     SUCCESS = 6
+    BUILD = 7
 
 
 class ExecMode(Enum):

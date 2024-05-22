@@ -9,9 +9,10 @@ import os
 import logging
 import urllib
 from distutils.dir_util import copy_tree
+from meshroom.core.node import Status
 
 from meshroom.core import desc, hashValue
-from meshroom.core import plugins_folder
+from meshroom.core import plugins_folder, defaultCacheFolder
 
 #FIXME: could replace with parsing to avoid dep
 import docker
@@ -25,39 +26,42 @@ def install_plugin(plugin_url, run_all_build=False):
             - [plugin folder] (will be the plugin name)
                 - meshroomNodes
                     - [code for your nodes] that contains relative path to a DockerFile|env.yaml|requirements.txt
+                    - [...]
         - having a meshroomPlugin.json file at the root of the plugin folder
     """
-    logging.info("Installing plugin rom "+plugin_url)
+    logging.info("Installing plugin from "+plugin_url)
     try:
-        #if url, clone the repo
+        #if url, clone the repo in cache
         if urllib.parse.urlparse(plugin_url).scheme in ('http', 'https','git'):
-            os.chdir(plugins_folder)
+            os.chdir(defaultCacheFolder)
             os.system("git clone "+plugin_url)
-            plugin_name = plugin_url.split("/")[-1] #FIXME: eee
-            plugin_root_path = os.path.join(plugins_folder, plugin_name)
-        #else copy directory  to folder
-        elif os.path.isdir(plugin_url):
-            plugin_name = os.path.basename(plugin_url)
-            plugin_root_path = os.path.join(plugins_folder, plugin_name)
-            copy_tree(plugin_url, plugin_root_path)#FIXME: symlink instead? easier for dev
-        else:
+            plugin_url = os.path.join(defaultCacheFolder, plugin_name)
+        
+        if not os.path.isdir(plugin_url):
             ValueError("Invalid plugin path :"+plugin_url)
 
-        logging.info("Installing "+plugin_name+" in "+plugin_root_path)
-
-        #default values
-        nodesFolder = os.path.join(plugin_root_path, "meshroomNodes") #FIXME: add to env vars
+        #get the name from folder
+        plugin_name = os.path.basename(plugin_url)
+        #default node location
+        nodesFolder = os.path.join(plugin_url, "meshroomNodes")
+        #TODO: pipeline folder
 
         #load json for custom install
-        if os.path.isfile(os.path.join(plugin_root_path), "meshroomPlugin.json"):
+        if os.path.isfile(os.path.join(plugin_url, "meshroomPlugin.json")):
             raise NotImplementedError("Install from json not supported yet")
+     
+        logging.info("Installing "+plugin_name+" from "+plugin_url)
+
+        #copythe node folder in the plugin folder
+        # FIXME: symlink would be usefull for dev, but quid install from github in cache?
+        copy_tree(nodesFolder, os.path.join(plugins_folder, plugin_name))
 
         #load and build each node?
         if run_all_build:
             raise NotImplementedError("Prebuild not implemented yet")
     
     except Exception as ex:
-        print(ex)
+        logging.error(ex)
         return False
         
     return True
@@ -76,8 +80,7 @@ class PluginNode(desc.CommandLineNode):
         """
         with open(cls.env_file, 'r') as file:
             env_content = file.read()
-        cls._env_name=hashValue(env_content)
-        return cls._env_name
+        return "mr_plugin_"+hashValue(env_content)
 
     def build():
         raise RuntimeError("Virtual class must be overloaded")
@@ -176,17 +179,19 @@ def env_name_exists(image_name):
 class DockerNode(PluginNode):
     def build(cls):
         #build image 
-        logging.info("Creating image "+cls.env_name+" from "+ cls.env_file)
-        build_command = "docker build "+cls.env_file+" -t "+cls._env_name
-        logging.info("Building...")
+        logging.info("Creating image "+cls._env_name+" from "+ cls.env_file)
+        build_command = "docker build -f "+cls.env_file+" -t "+cls._env_name+" "+os.path.dirname(cls.env_file)
+        logging.info("Building with "+build_command+" ...")
         os.system(build_command)
         logging.info("Done")
 
     def buildCommandLine(self, chunk):
         cmdPrefix = ''
-
+        #if the env was never built
         if not env_name_exists(self._env_name):
+            chunk.node.upgradeStatusTo(Status.BUILD)
             self.build()
+            chunk.upgradeStatusTo(Status.NONE)
   
         #mount point in the working dir wich is the node dir
         mount_cl = ' --mount type=bind,source="$(pwd)",target=/node_folder '

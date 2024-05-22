@@ -27,9 +27,11 @@ Entity {
     /// True while at least one media is being loaded
     readonly property bool loading: {
         for (var i = 0; i < m.mediaModel.count; ++i) {
-            if (m.mediaModel.get(i).status === SceneLoader.Loading)
+            if (m.mediaModel.get(i).status === SceneLoader.Loading) {
                 return true
+            }
         }
+
         return false
     }
 
@@ -80,9 +82,11 @@ Entity {
     function find(source) {
         for (var i = 0; i < m.mediaModel.count; ++i) {
             var elt = m.mediaModel.get(i)
-            if (elt.source === source || elt.attribute === source)
+            if (elt.source === source || elt.attribute === source) {
                 return i
+            }
         }
+
         return -1
     }
 
@@ -92,13 +96,13 @@ Entity {
             console.warn("Media Error: File " + pathStr + " does not exist.")
             return
         }
-        // file already loaded, return
+        // File already loaded, return
         if (m.sourceToEntity[pathStr]) {
             ensureVisible(pathStr)
             return
         }
 
-        // add file to the internal ListModel
+        // Add file to the internal ListModel
         m.mediaModel.append(makeElement({
                     "source": pathStr,
                     "label": label ? label : Filepath.basename(pathStr),
@@ -114,16 +118,17 @@ Entity {
 
         var attrLabel = attribute.isOutput ? "" : attribute.fullName.replace(attribute.node.name, "")
         var section = attribute.node.label
-        // add file to the internal ListModel
+
+        // Add file to the internal ListModel
         m.mediaModel.append(makeElement({
-                "label": section + attrLabel,
-                "section": section,
-                "attribute": attribute,
+            "label": section + attrLabel,
+            "section": section,
+            "attribute": attribute
         }))
     }
 
     function remove(index) {
-        // remove corresponding entry from model
+        // Remove corresponding entry from model
         m.mediaModel.remove(index)
     }
 
@@ -167,11 +172,14 @@ Entity {
 
             // Specific properties to the MESHING node (declared and initialized for every Entity anyway)
             property bool hasBoundingBox: {
-                if (currentNode.hasAttribute("useBoundingBox")) // Can have a BoundingBox
+                if (currentNode.hasAttribute("useBoundingBox")) {  // Can have a BoundingBox
                     return currentNode.attribute("useBoundingBox").value
+                }
                 return false
             }
-            onHasBoundingBoxChanged: model.hasBoundingBox = hasBoundingBox
+            onHasBoundingBoxChanged: {
+                model.hasBoundingBox = hasBoundingBox
+            }
             property bool displayBoundingBox: model.displayBoundingBox
 
             // Specific properties to the SFMTRANSFORM node (declared and initialized for every Entity anyway)
@@ -197,23 +205,24 @@ Entity {
                 readonly property var modelSource: attribute || model.source
                 readonly property bool visible: model.visible
 
-                // multi-step binding to ensure MediaLoader source is properly
+                // Multi-step binding to ensure MediaLoader source is properly
                 // updated when needed, whether raw source is valid or not
 
-                // raw source path
+                // Raw source path
                 property string rawSource: attribute ? attribute.value : model.source
-                // whether dependencies are statified (applies for output/connected input attributes only)
+                // Whether dependencies are satisfied (applies for output/connected input attributes only)
                 readonly property bool dependencyReady: {
                     if (attribute) {
                         const rootAttribute = attribute.isLink ? attribute.rootLinkParam : attribute
-                        if (rootAttribute.isOutput)
+                        if (rootAttribute.isOutput) {
                             return rootAttribute.node.globalStatus === "SUCCESS"
+                        }
                     }
-                    return true // is an input param without link (so no dependency) or an external file
+                    return true // Is an input param without link (so no dependency) or an external file
                 }
-                // source based on raw source + dependency status
+                // Source based on raw source + dependency status
                 property string currentSource: dependencyReady ? rawSource : ""
-                // source based on currentSource + "requested" property
+                // Source based on currentSource + "requested" property
                 property string finalSource: model.requested ? currentSource : ""
 
                 // To use only if we want to draw the input source and not the current node output (Warning: to use with caution)
@@ -230,16 +239,13 @@ Entity {
 
                 // QObject.destroyed signal is not accessible
                 // Use the object as NodeInstantiator model to be notified of its deletion
-                NodeInstantiator {
-                    model: attribute
-                    delegate: Entity { objectName: "DestructionWatcher [" + model.toString() + "]" }
-                    onObjectRemoved: remove(index)
-                }
 
                 property bool alive: attribute ? attribute.node.alive : false
+
                 onAliveChanged: {
-                    if (!alive && index >= 0)
-                          remove(index)
+                    if (!alive && index >= 0) {
+                        remove(index)
+                    }
                 }
 
                 // 'visible' property drives media loading request
@@ -247,38 +253,39 @@ Entity {
                     // always request media loading if visible
                     if (model.visible)
                         model.requested = true
-                    // only cancel loading request if media is not valid
+                    // Only cancel loading request if media is not valid
                     // (a media won't be unloaded if already loaded, only hidden)
                     else if (!model.valid)
                         model.requested = false
                 }
 
                 function updateCacheAndModel(forceRequest) {
-                    // don't cache explicitly unloaded media
+                    // Don't cache explicitly unloaded media
                     if (model.requested && object && dependencyReady) {
-                        // cache current object
+                        // Cache current object
                         if (cache.add(Filepath.urlToString(mediaLoader.source), object))
                             object = null
                     }
+
                     updateModel(forceRequest)
                 }
 
                 function updateModel(forceRequest) {
-                    // update model's source path if input is an attribute
+                    // Update model's source path if input is an attribute
                     if (attribute) {
                         model.source = rawSource
                     }
-                    // auto-restore entity if raw source is in cache
+                    // Auto-restore entity if raw source is in cache
                     model.requested = forceRequest || (!model.valid && model.requested) || cache.contains(rawSource)
                     model.valid = Filepath.exists(rawSource) && dependencyReady
                 }
 
                 Component.onCompleted: {
-                    // keep 'source' -> 'entity' reference
+                    // Keep 'source' -> 'entity' reference
                     m.sourceToEntity[modelSource] = instantiatedEntity
-                    // always request media loading when delegate has been created
+                    // Always request media loading when delegate has been created
                     updateModel(true)
-                    // if external media failed to open, remove element from model
+                    // If external media failed to open, remove element from model
                     if (!attribute && !object)
                         remove(index)
                 }
@@ -292,7 +299,7 @@ Entity {
                 }
 
                 onFinalSourceChanged: {
-                    // update media visibility
+                    // Update media visibility
                     // (useful if media was explicitly unloaded or hidden but loaded back from cache)
                     model.visible = model.requested
 
@@ -300,7 +307,7 @@ Entity {
                     cached = cachedObject !== undefined
                     if (cached) {
                         object = cachedObject
-                        // only change cached object parent if mediaLoader has been fully instantiated
+                        // Only change cached object parent if mediaLoader has been fully instantiated
                         // by the NodeInstantiator; otherwise re-parenting will fail silently and the object will disappear...
                         // see "onFullyInstantiatedChanged" and parent NodeInstantiator's "onObjectAdded"
                         if (fullyInstantiated) {
@@ -309,28 +316,28 @@ Entity {
                     }
                     mediaLoader.source = Filepath.stringToUrl(finalSource)
                     if (object) {
-                        // bind media info to corresponding model roles
+                        // Bind media info to corresponding model roles
                         // (test for object validity to avoid error messages right after object has been deleted)
                         var boundProperties = ["vertexCount", "faceCount", "cameraCount", "textureCount", "resectionIdCount", "resectionId", "resectionGroups"]
                         boundProperties.forEach(function(prop) {
                             model[prop] = Qt.binding(function() { return object ? object[prop] : 0 })
                         })
                     } else if (finalSource && status === Component.Ready) {
-                        // source was valid but no loader was created, remove element
-                        // check if component is ready to avoid removing element from the model before adding instance to the node
+                        // Source was valid but no loader was created, remove element
+                        // Check if component is ready to avoid removing element from the model before adding instance to the node
                         remove(index)
                     }
                 }
 
                 onFullyInstantiatedChanged: {
-                    // delayed reparenting of object coming from the cache
+                    // Delayed reparenting of object coming from the cache
                     if (object)
                         object.parent = mediaLoader
                 }
 
                 onStatusChanged: {
                     model.status = status
-                    // remove model entry for external media that failed to load
+                    // Remove model entry for external media that failed to load
                     if (status === SceneLoader.Error && !model.attribute)
                         remove(index)
                 }
@@ -339,7 +346,7 @@ Entity {
                     ObjectPicker {
                         enabled: mediaLoader.enabled && pickingEnabled
                         hoverEnabled: false
-                        onPressed: root.pressed(pick)
+                        onPressed: function(pick) { root.pressed(pick) }
                     }
                 ]
             }
@@ -383,12 +390,12 @@ Entity {
             }
         }
 
-        onObjectAdded: {
-            // notify object that it is now fully instantiated
+        onObjectAdded: function(index, object) {
+            // Notify object that it is now fully instantiated
             object.fullyInstantiated = true
         }
 
-        onObjectRemoved: {
+        onObjectRemoved: function(index, object) {
             if (m.sourceToEntity[object.modelSource])
                 delete m.sourceToEntity[object.modelSource]
         }

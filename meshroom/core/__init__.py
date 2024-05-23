@@ -356,7 +356,7 @@ for sub in subs:
 # added to the environment variable
 additionalPipelinesPath = os.environ.get("MESHROOM_PIPELINE_TEMPLATES_PATH", "").split(os.pathsep)
 additionalPipelinesPath = [i for i in additionalPipelinesPath if i]
-pipelineTemplatesFolders = [os.path.join(meshroomFolder, 'pipelines')] + additionalPipelinesPath
+pipelineTemplatesFolders = [os.path.join(meshroomFolder, 'pipelines')] + additionalPipelinesPath + [pluginsPipelinesFolder]
 
 for f in pipelineTemplatesFolders:
     loadPipelineTemplates(f)

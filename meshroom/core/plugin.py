@@ -8,11 +8,11 @@ This file defines the nodes and logic needed for the plugin system in meshroom.
 import os
 import logging
 import urllib
-from distutils.dir_util import copy_tree
+from distutils.dir_util import copy_tree, remove_tree
 
 from meshroom.core.node import Status
 from meshroom.core import desc, hashValue
-from meshroom.core import pluginsFolder, pipelinesFolder, defaultCacheFolder
+from meshroom.core import pluginsNodesFolder, pluginsPipelinesFolder, defaultCacheFolder
 
 #NOTE: could replace with parsing to avoid dependancy to docker api
 import docker
@@ -48,23 +48,32 @@ def installPlugin(pluginUrl):
         pluginName = os.path.basename(pluginUrl)
         #default node and pipeline locations
         nodesFolder = os.path.join(pluginUrl, "meshroomNodes")
-        pluginPipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
+        pipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
 
         #load json for custom install
         if os.path.isfile(os.path.join(pluginUrl, "meshroomPlugin.json")):
             raise NotImplementedError("Install from json not supported yet")
      
         logging.info("Installing "+pluginName+" from "+pluginUrl)
+        intallFolder = os.path.join(pluginsNodesFolder, pluginName)
+
+        #check if already installed
+        if os.path.isdir(intallFolder):
+            logging.warn("Plugin already installed, will overwrite")
+            if os.path.islink(intallFolder):
+                os.unlink(intallFolder)
+            else:
+                remove_tree(intallFolder)
 
         #install via symlink if local, otherwise copy and delete the repo
         if isLocal:
-            os.symlink(nodesFolder, os.path.join(pluginsFolder, pluginName))
-            if os.path.isdir(pluginPipelineFolder):
-                os.symlink(pluginPipelineFolder, pipelinesFolder)
+            os.symlink(nodesFolder, intallFolder)
+            if os.path.isdir(pipelineFolder):
+                os.symlink(pipelineFolder, pluginsPipelinesFolder)
         else:
-            copy_tree(nodesFolder, os.path.join(pluginsFolder, pluginName))
-            if os.path.isdir(pluginPipelineFolder):
-                copy_tree(pluginPipelineFolder, pipelinesFolder)
+            copy_tree(nodesFolder, intallFolder)
+            if os.path.isdir(pipelineFolder):
+                copy_tree(pipelineFolder, pluginsPipelinesFolder)
             os.removedirs(pluginUrl)
 
     except Exception as ex:

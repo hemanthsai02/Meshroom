@@ -332,7 +332,8 @@ def loadPipelineTemplates(folder):
 meshroomFolder = os.path.dirname(os.path.dirname(__file__))
 
 #folders for plugins to be installed in
-pluginsFolder = os.path.join(meshroomFolder, "plugins")
+pluginsNodesFolder = os.path.join(meshroomFolder, "plugins")
+pluginsPipelinesFolder = os.path.join(meshroomFolder, "pipelines")
 
 additionalNodesPath = os.environ.get("MESHROOM_NODES_PATH", "").split(os.pathsep)
 # filter empty strings
@@ -340,7 +341,7 @@ additionalNodesPath = [i for i in additionalNodesPath if i]
 
 # Load plugins:
 # - Nodes
-nodesFolders = [os.path.join(meshroomFolder, 'nodes')] + [pluginsFolder] + additionalNodesPath
+nodesFolders = [os.path.join(meshroomFolder, 'nodes')] + [pluginsNodesFolder] + additionalNodesPath
 
 for f in nodesFolders:
     loadAllNodes(folder=f)
@@ -353,10 +354,9 @@ for sub in subs:
 
 # Load pipeline templates: check in the default folder and any folder the user might have
 # added to the environment variable
-pipelinesFolder = os.path.join(meshroomFolder, 'pipelines')
 additionalPipelinesPath = os.environ.get("MESHROOM_PIPELINE_TEMPLATES_PATH", "").split(os.pathsep)
 additionalPipelinesPath = [i for i in additionalPipelinesPath if i]
-pipelineTemplatesFolders = [pipelinesFolder] + additionalPipelinesPath
+pipelineTemplatesFolders = [os.path.join(meshroomFolder, 'pipelines')] + additionalPipelinesPath
 
 for f in pipelineTemplatesFolders:
     loadPipelineTemplates(f)

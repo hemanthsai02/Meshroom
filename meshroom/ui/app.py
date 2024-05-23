@@ -102,8 +102,6 @@ class MeshroomApp(QApplication):
         }
         logging.getLogger().setLevel(logStringToPython[args.verbose])
 
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-
         super(MeshroomApp, self).__init__(QtArgs)
 
         self.setOrganizationName('AliceVision')

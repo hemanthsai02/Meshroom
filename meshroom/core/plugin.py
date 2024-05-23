@@ -9,12 +9,12 @@ import os
 import logging
 import urllib
 from distutils.dir_util import copy_tree
+
 from meshroom.core.node import Status
-
 from meshroom.core import desc, hashValue
-from meshroom.core import pluginsFolder, defaultCacheFolder
+from meshroom.core import pluginsFolder, pipelinesFolder, defaultCacheFolder
 
-#FIXME: could replace with parsing to avoid dep
+#NOTE: could replace with parsing to avoid dependancy to docker api
 import docker
 
 def installPlugin(pluginUrl):
@@ -46,10 +46,9 @@ def installPlugin(pluginUrl):
 
         #get the plugin name from folder
         pluginName = os.path.basename(pluginUrl)
-        #default node location
+        #default node and pipeline locations
         nodesFolder = os.path.join(pluginUrl, "meshroomNodes")
-        #TODO: pipeline folder
-        # pipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
+        pluginPipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
 
         #load json for custom install
         if os.path.isfile(os.path.join(pluginUrl, "meshroomPlugin.json")):
@@ -60,8 +59,12 @@ def installPlugin(pluginUrl):
         #install via symlink if local, otherwise copy and delete the repo
         if isLocal:
             os.symlink(nodesFolder, os.path.join(pluginsFolder, pluginName))
+            if os.path.isdir(pluginPipelineFolder):
+                os.symlink(pluginPipelineFolder, pipelinesFolder)
         else:
             copy_tree(nodesFolder, os.path.join(pluginsFolder, pluginName))
+            if os.path.isdir(pluginPipelineFolder):
+                copy_tree(pluginPipelineFolder, pipelinesFolder)
             os.removedirs(pluginUrl)
 
     except Exception as ex:

@@ -96,7 +96,7 @@ class PluginNode(desc.CommandLineNode):
         """
         with open(cls.envFile, 'r') as file:
             envContent = file.read()
-        return "MrPlugin_"+hashValue(envContent)
+        return "meshroom_plugin_"+hashValue(envContent)
 
     def build():
         raise RuntimeError("Virtual class must be overloaded")
@@ -203,9 +203,9 @@ class DockerNode(PluginNode):
         cmdPrefix = ''
         #if the env was never built
         if not envNameExists(self._envName):
-            chunk.node.upgradeStatusTo(Status.BUILD)
+            chunk.upgradeStatusTo(Status.BUILD)
             self.build()
-            chunk.upgradeStatusTo(Status.NONE)
+            chunk.upgradeStatusTo(Status.RUNNING)
   
         #mount point in the working dir wich is the node dir
         mountCl = ' --mount type=bind,source="$(pwd)",target=/node_folder '

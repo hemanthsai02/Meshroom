@@ -86,7 +86,7 @@ class PluginNode(desc.CommandLineNode):
     #env file used to build the environement, you may overwrite this to custom the behaviour
     @property
     def envFile(cls):
-        raise NotImplementedError("You must specify an env file") #FIXME: automatically look in __file__?
+        raise NotImplementedError("You must specify an env file")
 
     #env name computed from hash, overwrite this to use a custom env 
     @property
@@ -176,8 +176,6 @@ class CondaNode(PluginNode):
             chunk.logManager.end()
             raise
         chunk.logManager.end()
-
-# %%
 
 def envNameExists(imageName):
     """

@@ -17,7 +17,7 @@ from meshroom.core import Version
 from meshroom.core.node import Node, CompatibilityNode, Status, Position
 from meshroom.ui.graph import UIGraph
 from meshroom.ui.utils import makeProperty
-from meshroom.core.plugin import install_plugin
+from meshroom.core.plugin import installPlugin
 
 
 class Message(QObject):
@@ -554,7 +554,7 @@ class Reconstruction(UIGraph):
     @Slot(QUrl, result=bool)
     def installPlugin(self, url):
         localFile = prepareUrlLocalFile(url)
-        return install_plugin(localFile)
+        return installPlugin(localFile)
 
     def onGraphChanged(self):
         """ React to the change of the internal graph. """

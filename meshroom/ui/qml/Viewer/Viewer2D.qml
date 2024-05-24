@@ -1133,8 +1133,8 @@ FocusScope {
                         MaterialToolButton {
                             id: displayLensDistortionViewer
 
-                            property int numberChanges: null
-                            property bool previousChecked: null
+                            property int numberChanges: undefined
+                            property bool previousChecked: undefined
                             property var activeNode: root.aliceVisionPluginAvailable && _reconstruction ? _reconstruction.activeNodes.get('sfmData').node : null
                             property bool isComputed: {
                                 if (!activeNode)

@@ -36,8 +36,8 @@ class PluginParams():
             self.pluginName = jsonData["pluginName"]
             #default node and pipeline locations
             self.nodesFolder = os.path.join(pluginUrl, jsonData["nodesFolder"])
-            if "meshroomPipelines" in jsonData.keys():
-                self.pipelineFolder = os.path.join(pluginUrl, jsonData["meshroomPipelines"])
+            if "pipelineFolder" in jsonData.keys():
+                self.pipelineFolder = os.path.join(pluginUrl, jsonData["pipelineFolder"])
 
 def installPlugin(pluginUrl):
     """

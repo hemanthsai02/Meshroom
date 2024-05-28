@@ -3,19 +3,41 @@
 
 """
 This file defines the nodes and logic needed for the plugin system in meshroom.
+We use the term 'environement' to abstract a docker container or a conda/virtual environement 
 """
 
+import json
 import os
 import logging
 import urllib
 from distutils.dir_util import copy_tree, remove_tree
 
+#NOTE: could replace with parsing to avoid dependancy to docker api
+import docker
+
 from meshroom.core.node import Status
 from meshroom.core import desc, hashValue
 from meshroom.core import pluginsNodesFolder, pluginsPipelinesFolder, defaultCacheFolder
 
-#NOTE: could replace with parsing to avoid dependancy to docker api
-import docker
+class PluginParams():
+    """"
+    Class that holds parameters to install one plugin from a folder and optionally from a json structure
+    """
+    def __init__(self, pluginUrl, jsonData=None):
+        #NOTE: other fields? such as other location for the env file, dependencies
+        
+        #get the plugin name from folder
+        self.pluginName = os.path.basename(pluginUrl)
+        #default node and pipeline locations
+        self.nodesFolder = os.path.join(pluginUrl, "meshroomNodes")
+        self.pipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
+
+        if jsonData is not None:
+            self.pluginName = jsonData["pluginName"]
+            #default node and pipeline locations
+            self.nodesFolder = os.path.join(pluginUrl, jsonData["nodesFolder"])
+            if "meshroomPipelines" in jsonData.keys():
+                self.pipelineFolder = os.path.join(pluginUrl, jsonData["meshroomPipelines"])
 
 def installPlugin(pluginUrl):
     """
@@ -27,13 +49,17 @@ def installPlugin(pluginUrl):
                 - meshroomNodes
                     - [code for your nodes] that contains relative path to a DockerFile|env.yaml|requirements.txt
                     - [...]
+                - meshroomPipelines
+                    - [your meshroom templates]
+            With this solution, you can only have one environnement for the hole plugin.
         - having a meshroomPlugin.json file at the root of the plugin folder
+          With this solution, you may have several envionnements.
     """
     logging.info("Installing plugin from "+pluginUrl)
     try:
         isLocal = True
 
-        #if url, clone the repo in cache
+        #if git repo, clone the repo in cache
         if urllib.parse.urlparse(pluginUrl).scheme in ('http', 'https','git'):
             os.chdir(defaultCacheFolder)
             os.system("git clone "+pluginUrl)
@@ -41,40 +67,53 @@ def installPlugin(pluginUrl):
             pluginUrl = os.path.join(defaultCacheFolder, pluginName)
             isLocal = False
         
+        #sanity check
         if not os.path.isdir(pluginUrl):
             ValueError("Invalid plugin path :"+pluginUrl)
 
-        #get the plugin name from folder
-        pluginName = os.path.basename(pluginUrl)
-        #default node and pipeline locations
-        nodesFolder = os.path.join(pluginUrl, "meshroomNodes")
-        pipelineFolder = os.path.join(pluginUrl, "meshroomPipelines")
+        #by default only one plugin, and with default file hierachy
+        pluginParamList=[PluginParams(pluginUrl)]
 
-        #load json for custom install
-        if os.path.isfile(os.path.join(pluginUrl, "meshroomPlugin.json")):
-            raise NotImplementedError("Install from json not supported yet")
-     
-        logging.info("Installing "+pluginName+" from "+pluginUrl)
-        intallFolder = os.path.join(pluginsNodesFolder, pluginName)
+        #location of the json file if any
+        paramFile=os.path.join(pluginUrl, "meshroomPlugin.json")
+        #load json for custom install if any
+        if os.path.isfile(paramFile):
+            jsonData=json.load(open(paramFile,"r"))
+            pluginParamList = [PluginParams(pluginUrl, jsonDataplugin) for jsonDataplugin in jsonData]
+        
+        #for each plugin, run the 'install'
+        for pluginParam in pluginParamList:
+            intallFolder = os.path.join(pluginsNodesFolder, pluginParam.pluginName)
 
-        #check if already installed
-        if os.path.isdir(intallFolder):
-            logging.warn("Plugin already installed, will overwrite")
-            if os.path.islink(intallFolder):
-                os.unlink(intallFolder)
+            logging.info("Installing "+pluginParam.pluginName+" from "+pluginUrl+" in "+intallFolder)
+
+            #check if folder valid
+            if not os.path.isdir(pluginParam.nodesFolder):
+                raise RuntimeError("Invalid node folder: "+pluginParam.nodesFolder)
+
+            #check if already installed
+            if os.path.isdir(intallFolder):
+                logging.warn("Plugin already installed, will overwrite")
+                if os.path.islink(intallFolder):
+                    os.unlink(intallFolder)
+                else:
+                    remove_tree(intallFolder)
+
+            #install via symlink if local, otherwise copy (usefull to develop)
+            if isLocal:
+                os.symlink(pluginParam.nodesFolder, intallFolder)
+                if os.path.isdir(pluginParam.pipelineFolder):
+                    os.symlink(pluginParam.pipelineFolder, pluginsPipelinesFolder)
             else:
-                remove_tree(intallFolder)
+                copy_tree(pluginParam.nodesFolder, intallFolder)
+                if os.path.isdir(pluginParam.pipelineFolder):
+                    copy_tree(pluginParam.pipelineFolder, pluginsPipelinesFolder)
 
-        #install via symlink if local, otherwise copy and delete the repo
-        if isLocal:
-            os.symlink(nodesFolder, intallFolder)
-            if os.path.isdir(pipelineFolder):
-                os.symlink(pipelineFolder, pluginsPipelinesFolder)
-        else:
-            copy_tree(nodesFolder, intallFolder)
-            if os.path.isdir(pipelineFolder):
-                copy_tree(pipelineFolder, pluginsPipelinesFolder)
+        #remove repo if was cloned
+        if not isLocal:
             os.removedirs(pluginUrl)
+
+        #NOTE: could try to auto load the plugins to avoid restart and test files
 
     except Exception as ex:
         logging.error(ex)
@@ -83,12 +122,13 @@ def installPlugin(pluginUrl):
     return True
     
 class PluginNode(desc.CommandLineNode):
+
     #env file used to build the environement, you may overwrite this to custom the behaviour
     @property
     def envFile(cls):
         raise NotImplementedError("You must specify an env file")
 
-    #env name computed from hash, overwrite this to use a custom env 
+    #env name computed from hash, overwrite this to use a custom pre-build env 
     @property
     def _envName(cls):
         """
@@ -112,7 +152,7 @@ def curateEnvCommand():
     for envVar in os.environ.keys():
         if ((("py" in envVar) or  ("PY" in envVar)) 
             and ("REZ" not in envVar) and ("." not in envVar) and ("-" not in envVar)):
-            if envVar.endswith("()"):#function get special treatment
+            if envVar.endswith("()"):
                 cmd+='unset -f '+envVar[10:-2]+'; '
             else:
                 cmd+='unset '+envVar+'; '
@@ -177,7 +217,7 @@ class CondaNode(PluginNode):
             raise
         chunk.logManager.end()
 
-def envNameExists(imageName):
+def dockerImageExists(imageName):
     """
     Checks if an image exists with a given name
     """
@@ -200,7 +240,7 @@ class DockerNode(PluginNode):
     def buildCommandLine(self, chunk):
         cmdPrefix = ''
         #if the env was never built
-        if not envNameExists(self._envName):
+        if not dockerImageExists(self._envName):
             chunk.upgradeStatusTo(Status.BUILD)
             self.build()
             chunk.upgradeStatusTo(Status.RUNNING)
@@ -223,7 +263,7 @@ class DockerNode(PluginNode):
                 chunk.saveStatusFile()
                 print(' - commandLine: {}'.format(cmd))
                 print(' - logFile: {}'.format(chunk.logFile))
-                #popen doesnt work with docker, also move to node folder
+                #popen doesnt work with docker, also move to node folder is necessary
                 chunk.status.returnCode = os.system("cd "+chunk.node.internalFolder+" && "+cmd)
                 logContent=""
 
@@ -235,3 +275,7 @@ class DockerNode(PluginNode):
             chunk.logManager.end()
             raise
         chunk.logManager.end()
+
+
+class VirtualEnvNode(PluginNode):
+    pass

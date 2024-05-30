@@ -172,7 +172,7 @@ Item {
                 DropArea {
                     anchors.fill: parent
                     keys: ["text/uri-list"]
-                    onDropped: {
+                    onDropped: function(drop) {
                         viewer2D.loadExternal(drop.urls[0]);
                     }
                 }

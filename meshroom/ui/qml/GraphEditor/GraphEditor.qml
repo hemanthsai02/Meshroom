@@ -346,8 +346,8 @@ Item {
 
                     Instantiator {
                         model: newNodeMenu.visible && newNodeSubMenu.activeFocus ? newNodeMenu.parseCategories()[modelData] : undefined
-                        onObjectAdded: newNodeSubMenu.insertItem(index, object)
-                        onObjectRemoved: newNodeSubMenu.removeItem(object)
+                        onObjectAdded: function(index, object) { newNodeSubMenu.insertItem(index, object) }
+                        onObjectRemoved: function(index, object) { newNodeSubMenu.removeItem(object) }
                         delegate: menuItemDelegateComponent
                     }
                 }
@@ -779,7 +779,7 @@ Item {
                 })
             }
 
-            onDropped: {
+            onDropped: function(drop) {
                 if (nbMeshroomScenes == nbDraggedFiles || nbMeshroomScenes == 0) {
                     // retrieve mouse position and convert coordinate system
                     // from pixel values to graph reference system

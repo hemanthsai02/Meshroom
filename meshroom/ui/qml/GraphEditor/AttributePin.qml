@@ -106,20 +106,20 @@ RowLayout {
                    ) {
                     // Refuse attributes connection
                     drag.accepted = false
-                } else if (inputDragTarget.attribute.isLink) { // already connected attribute
+                } else if (inputDragTarget.attribute.isLink) {  // Already connected attribute
                     root.edgeAboutToBeRemoved(inputDragTarget.attribute)
                 }
                 inputDropArea.acceptableDrop = drag.accepted
             }
             onExited: {
-                if (inputDragTarget.attribute.isLink) { // already connected attribute
+                if (inputDragTarget.attribute.isLink) {  // Already connected attribute
                     root.edgeAboutToBeRemoved(undefined)
                 }
                 acceptableDrop = false
                 drag.source.dropAccepted = false
             }
 
-            onDropped: {
+            onDropped: function(drop) {
                 root.edgeAboutToBeRemoved(undefined)
                 _reconstruction.addEdge(drag.source.attribute, inputDragTarget.attribute)
             }
@@ -258,7 +258,7 @@ RowLayout {
                    ) {
                     // Refuse attributes connection
                     drag.accepted = false
-                } else if (drag.source.attribute.isLink) { // already connected attribute
+                } else if (drag.source.attribute.isLink) {  // Already connected attribute
                     root.edgeAboutToBeRemoved(drag.source.attribute)
                 }
                 outputDropArea.acceptableDrop = drag.accepted
@@ -268,7 +268,7 @@ RowLayout {
                 acceptableDrop = false
             }
 
-            onDropped: function(drag) {
+            onDropped: function(drop) {
                 root.edgeAboutToBeRemoved(undefined)
                 _reconstruction.addEdge(outputDragTarget.attribute, drag.source.attribute)
             }

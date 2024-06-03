@@ -223,6 +223,7 @@ class Graph(BaseObject):
         self._compatibilityNodes = DictModel(keyAttrName='name', parent=self)
         self.cacheDir = meshroom.core.defaultCacheFolder
         self._filepath = ''
+        self._fileDateVersion = 0
         self.header = {}
 
     def clear(self):
@@ -267,6 +268,8 @@ class Graph(BaseObject):
 
         if not isinstance(graphData, dict):
             raise RuntimeError('loadGraph error: Graph is not a dict. File: {}'.format(filepath))
+        
+        self._fileDateVersion = os.path.getmtime(filepath)
 
         self.header = fileData.get(Graph.IO.Keys.Header, {})
         nodesVersions = self.header.get(Graph.IO.Keys.NodesVersions, {})
@@ -930,7 +933,7 @@ class Graph(BaseObject):
 
         for edge in self.getEdges(dependenciesOnly=dependenciesOnly):
             nodeEdges[edge.src.node].add(edge.dst.node)
-
+        
         return nodeEdges
 
     def dfs(self, visitor, startNodes=None, longestPathFirst=False):
@@ -1111,7 +1114,7 @@ class Graph(BaseObject):
         self._computationBlocked.clear()
 
         compatNodes = []
-        visitor = Visitor(reverse=False, dependenciesOnly=True)
+        visitor = Visitor(reverse=False, dependenciesOnly=False)
 
         def discoverVertex(vertex, graph):
             # initialize depths
@@ -1539,6 +1542,18 @@ class Graph(BaseObject):
         self.updateStatusFromCache(force=True)
         self.cacheDirChanged.emit()
 
+    @property
+    def fileDateVersion(self):
+        return self._fileDateVersion
+    
+    @fileDateVersion.setter
+    def fileDateVersion(self, value):
+        self._fileDateVersion = value
+
+    @Slot(str, result=float)
+    def getFileDateVersionFromPath(self, value):
+        return os.path.getmtime(value)
+
     def setVerbose(self, v):
         with GraphModification(self):
             for node in self._nodes:
@@ -1553,6 +1568,7 @@ class Graph(BaseObject):
     filepathChanged = Signal()
     filepath = Property(str, lambda self: self._filepath, notify=filepathChanged)
     fileReleaseVersion = Property(str, lambda self: self.header.get(Graph.IO.Keys.ReleaseVersion, "0.0"), notify=filepathChanged)
+    fileDateVersion = Property(float, fileDateVersion.fget, fileDateVersion.fset, notify=filepathChanged)
     cacheDirChanged = Signal()
     cacheDir = Property(str, cacheDir.fget, cacheDir.fset, notify=cacheDirChanged)
     updated = Signal()

@@ -17,6 +17,7 @@ from meshroom.core import Version
 from meshroom.core.node import Node, CompatibilityNode, Status, Position
 from meshroom.ui.graph import UIGraph
 from meshroom.ui.utils import makeProperty
+from meshroom.ui.components.filepath import FilepathHelper
 from meshroom.core.plugin import installPlugin
 
 
@@ -170,8 +171,10 @@ class ViewpointWrapper(QObject):
 
     initialParamsChanged = Signal()
     sfmParamsChanged = Signal()
-    denseSceneParamsChanged = Signal()
+    undistortedImageParamsChanged = Signal()
     internalChanged = Signal()
+    principalPointCorrectedChanged = Signal()
+    uvCenterOffsetChanged = Signal()
 
     def __init__(self, viewpointAttribute, reconstruction):
         """
@@ -195,16 +198,21 @@ class ViewpointWrapper(QObject):
         # PrepareDenseScene
         self._undistortedImagePath = ''
         self._activeNode_PrepareDenseScene = self._reconstruction.activeNodes.get("PrepareDenseScene")
+        self._activeNode_ExportAnimatedCamera = self._reconstruction.activeNodes.get("ExportAnimatedCamera")
+        self._principalPointCorrected = False
+        self.principalPointCorrectedChanged.connect(self.uvCenterOffsetChanged)
+        self.sfmParamsChanged.connect(self.uvCenterOffsetChanged)
 
         # update internally cached variables
         self._updateInitialParams()
         self._updateSfMParams()
-        self._updateDenseSceneParams()
+        self._updateUndistortedImageParams()
 
         # trigger internal members updates when reconstruction members changes
         self._reconstruction.cameraInitChanged.connect(self._updateInitialParams)
         self._reconstruction.sfmReportChanged.connect(self._updateSfMParams)
-        self._activeNode_PrepareDenseScene.nodeChanged.connect(self._updateDenseSceneParams)
+        self._activeNode_PrepareDenseScene.nodeChanged.connect(self._updateUndistortedImageParams)
+        self._activeNode_ExportAnimatedCamera.nodeChanged.connect(self._updateUndistortedImageParams)
 
     def _updateInitialParams(self):
         """ Update internal members depending on CameraInit. """
@@ -236,15 +244,20 @@ class ViewpointWrapper(QObject):
             self._reconstructed = self._R is not None
         self.sfmParamsChanged.emit()
 
-    def _updateDenseSceneParams(self):
-        """ Update internal members depending on PrepareDenseScene. """
+    def _updateUndistortedImageParams(self):
+        """ Update internal members depending on PrepareDenseScene or ExportAnimatedCamera. """
         # undistorted image path
-        if not self._activeNode_PrepareDenseScene.node:
-            self._undistortedImagePath = ''
+        if self._activeNode_ExportAnimatedCamera.node:
+            self._undistortedImagePath = FilepathHelper.resolve(FilepathHelper, self._activeNode_ExportAnimatedCamera.node.outputUndistorted.value, self._viewpoint)
+            self._principalPointCorrected = self._activeNode_ExportAnimatedCamera.node.correctPrincipalPoint.value
+        elif self._activeNode_PrepareDenseScene.node:
+            self._undistortedImagePath = FilepathHelper.resolve(FilepathHelper, self._activeNode_PrepareDenseScene.node.undistorted.value, self._viewpoint)
+            self._principalPointCorrected = False
         else:
-            filename = "{}.{}".format(self._viewpoint.viewId.value, self._activeNode_PrepareDenseScene.node.outputFileType.value)
-            self._undistortedImagePath = os.path.join(self._activeNode_PrepareDenseScene.node.output.value, filename)
-        self.denseSceneParamsChanged.emit()
+            self._undistortedImagePath = ''
+            self._principalPointCorrected = False
+        self.undistortedImageParamsChanged.emit()
+        self.principalPointCorrectedChanged.emit()
 
     # Get the underlying Viewpoint attribute wrapped by this Viewpoint.
     attribute = Property(QObject, lambda self: self._viewpoint, constant=True)
@@ -328,10 +341,10 @@ class ViewpointWrapper(QObject):
         """ Get camera up vector. """
         return QVector3D(0.0, 1.0, 0.0)
 
-    @Property(type=QVector2D, notify=sfmParamsChanged)
+    @Property(type=QVector2D, notify=uvCenterOffsetChanged)
     def uvCenterOffset(self):
         """ Get UV offset corresponding to the camera principal point. """
-        if not self.solvedIntrinsics:
+        if not self.solvedIntrinsics or self._principalPointCorrected:
             return None
         pp = self.solvedIntrinsics["principalPoint"]
         # compute principal point offset in UV space
@@ -351,7 +364,7 @@ class ViewpointWrapper(QObject):
             sensorHeight = self.solvedIntrinsics["sensorHeight"]
             return 2.0 * math.atan(float(sensorHeight) / (2.0 * float(focalLength))) * 180.0 / math.pi
 
-    @Property(type=QUrl, notify=denseSceneParamsChanged)
+    @Property(type=QUrl, notify=undistortedImageParamsChanged)
     def undistortedImageSource(self):
         """ Get path to undistorted image source if available. """
         return QUrl.fromLocalFile(self._undistortedImagePath)
@@ -520,6 +533,8 @@ class Reconstruction(UIGraph):
                     "Data might have been lost in the process.",
                     "Open it with the corresponding version of Meshroom to recover your data."
                 ))
+            
+            self.graph.fileDateVersion = os.path.getmtime(filepath)
             return status
         except FileNotFoundError as e:
             self.error.emit(
@@ -675,6 +690,8 @@ class Reconstruction(UIGraph):
         nodes = self._graph.dfsOnDiscover(startNodes=[startNode], filterTypes=nodeTypes, reverse=True)[0]
         if not nodes:
             return None
+        # order the nodes according to their depth in the graph, then according to their name
+        nodes.sort(key=lambda n: (n.depth, n.name))
         node = nodes[-1]
         if preferredStatus:
             node = next((n for n in reversed(nodes) if n.getGlobalStatus() == preferredStatus), node)
@@ -1009,7 +1026,7 @@ class Reconstruction(UIGraph):
         for category, node in nodesByCategory.items():
             self.activeNodes.get(category).node = node
             if category == 'sfm':
-                self.setSfm(node)
+                self.setActiveNode(self.lastSfmNode())
         for node in nodes:
             if node is None:
                 continue

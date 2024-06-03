@@ -13,7 +13,7 @@ FloatingPane {
 
     implicitWidth: 200
 
-    property int renderMode: 2
+    property int renderMode: 1
     property Grid3D grid: null
     property MediaLibrary mediaLibrary
     property Camera camera

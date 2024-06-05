@@ -1,14 +1,14 @@
 {
     "header": {
         "pipelineVersion": "2.2",
-        "releaseVersion": "2023.3.0",
+        "releaseVersion": "2024.1.0-develop",
         "fileVersion": "1.1",
         "template": true,
         "nodesVersions": {
-            "PhotometricStereo": "1.0",
             "CameraInit": "10.0",
-            "SphereDetection": "1.0",
             "LightingCalibration": "1.0",
+            "PhotometricStereo": "1.0",
+            "SphereDetection": "1.0",
             "Publish": "1.3"
         }
     },
@@ -40,7 +40,7 @@
             ],
             "inputs": {
                 "inputPath": "{SphereDetection_1.input}",
-                "inputJSON": "{SphereDetection_1.output}"
+                "inputDetection": "{SphereDetection_1.output}"
             }
         },
         "PhotometricStereo_1": {
@@ -62,12 +62,15 @@
             ],
             "inputs": {
                 "inputFiles": [
-                    "{PhotometricStereo_1.outputSfmData}",
                     "{PhotometricStereo_1.outputSfmDataNormal}",
                     "{PhotometricStereo_1.normals}",
                     "{PhotometricStereo_1.normalsWorld}",
                     "{PhotometricStereo_1.albedo}",
-                    "{PhotometricStereo_1.outputSfmDataAlbedo}"
+                    "{PhotometricStereo_1.outputSfmDataAlbedo}",
+                    "{PhotometricStereo_1.inputPath}",
+                    "{PhotometricStereo_1.outputSfmDataNormalPNG}",
+                    "{PhotometricStereo_1.normalsPNG}",
+                    "{PhotometricStereo_1.pathToJSONLightFile}"
                 ]
             }
         }

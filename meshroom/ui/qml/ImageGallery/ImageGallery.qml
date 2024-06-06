@@ -291,12 +291,14 @@ Panel {
                     }
 
                     function sendRemoveRequest() {
-                        if (!readOnly) {
-                            removeImageRequest(object)
-                            // If the last image has been removed, make sure the viewpoints and intrinsics are reset
-                            if (m.viewpoints.count === 0)
-                                allViewpointsCleared()
-                        }
+                        if (readOnly)
+                            return
+
+                        removeImageRequest(object)
+                        
+                        // If the last image has been removed, make sure the viewpoints and intrinsics are reset
+                        if (m.viewpoints.count === 0)
+                            allViewpointsCleared()
                     }
 
                     function removeAllImages() {
@@ -674,7 +676,7 @@ Panel {
 
             Label {
                 id: groupName
-                text: root.cameraInit ? root.cameraInit.label : ""
+                text: root.cameraInit ? "<b>" + root.cameraInit.label + "</b>" + (root.cameraInit.label !== root.cameraInit.defaultLabel ? " (" + root.cameraInit.defaultLabel + ")" : "") : ""
                 font.pointSize: 8
             }
         }

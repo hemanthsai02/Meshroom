@@ -240,7 +240,7 @@ FocusScope {
                     }
                 ]
 
-                onPressed: {
+                onPressed: function(pick) {
                     if (pick.button === Qt.LeftButton) {
                         mainCamera.viewCenter = pick.worldIntersection
                     }

@@ -331,9 +331,10 @@ def loadPipelineTemplates(folder):
 
 meshroomFolder = os.path.dirname(os.path.dirname(__file__))
 
-#folders for plugins to be installed in
+#folders for plugins/pipelines to be installed in
 pluginsNodesFolder = os.path.join(meshroomFolder, "plugins")
 pluginsPipelinesFolder = os.path.join(meshroomFolder, "pipelines")
+pluginCatalogFile = os.path.join(meshroomFolder, "plugins", "catalog.json")
 
 additionalNodesPath = os.environ.get("MESHROOM_NODES_PATH", "").split(os.pathsep)
 # filter empty strings

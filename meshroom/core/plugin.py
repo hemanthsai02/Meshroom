@@ -19,7 +19,7 @@ import docker
 
 from meshroom.core.node import Status
 from meshroom.core import desc, hashValue
-from meshroom.core import pluginsNodesFolder, pluginsPipelinesFolder, defaultCacheFolder
+from meshroom.core import pluginsNodesFolder, pluginsPipelinesFolder, defaultCacheFolder, pluginCatalogFile
 
 class PluginParams():
     """"
@@ -124,6 +124,10 @@ def installPlugin(pluginUrl):
         
     return True
 
+def getCatalog():
+    jsonData=json.load(open(pluginCatalogFile,"r"))
+    return jsonData
+        
 def getInstalledPlugin():
     installedPlugins = [os.path.join(pluginsNodesFolder, f) for f in os.listdir(pluginsNodesFolder)]
     return installedPlugins

@@ -3,7 +3,9 @@
 
 """
 This file defines the nodes and logic needed for the plugin system in meshroom.
-We use the term 'environement' to abstract a docker container or a conda/virtual environement 
+A plugin is a collection of node(s) of any type with their rutime environnement setup file attached.
+We use the term 'environement' to abstract a docker container or a conda/virtual environement.
+
 """
 
 import json
@@ -24,7 +26,7 @@ class PluginParams():
     Class that holds parameters to install one plugin from a folder and optionally from a json structure
     """
     def __init__(self, pluginUrl, jsonData=None):
-        #NOTE: other fields? such as other location for the env file, dependencies
+        #NOTE: other fields? such as other location for the env file, dependencies, extra folder/lib to install
         
         #get the plugin name from folder
         self.pluginName = os.path.basename(pluginUrl)
@@ -117,9 +119,22 @@ def installPlugin(pluginUrl):
 
     except Exception as ex:
         logging.error(ex)
+        #TODO: remove install
         return False
         
     return True
+
+def getInstalledPlugin():
+    installedPlugins = [os.path.join(pluginsNodesFolder, f) for f in os.listdir(pluginsNodesFolder)]
+    return installedPlugins
+
+def uninstallPlugin(pluginUrl):
+    if not os.path.exists(pluginUrl):
+        raise RuntimeError("Plugin "+pluginUrl+" is not installed")
+    if os.path.islink(pluginUrl):
+        os.unlink(pluginUrl)
+    else:
+        os.removedirs(pluginUrl) 
     
 class PluginNode(desc.CommandLineNode):
 

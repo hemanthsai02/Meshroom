@@ -186,7 +186,9 @@ def condaEnvExist(envName):
     return not output.startswith("EnvironmentLocationNotFound")
 
 class CondaNode(PluginNode):
-
+    """
+    Node that build conda environement from a yaml file and run all the commands in it.
+    """
     def build(cls):
         """
         Build a conda env from a yaml file
@@ -248,6 +250,9 @@ def dockerImageExists(imageName):
         return False
 
 class DockerNode(PluginNode):
+    """
+    Node that build a docker container from a dockerfile and run all the commands in it.
+    """
     def build(cls):
         #build image 
         logging.info("Creating image "+cls._envName+" from "+ cls.envFile)
@@ -295,6 +300,14 @@ class DockerNode(PluginNode):
             raise
         chunk.logManager.end()
 
-
-class VirtualEnvNode(PluginNode):
-    pass
+class PipNode(desc.Node):
+    """
+    Node than runs in the same python as meshroom, but install extra packages first
+    """
+    def build(cls):
+        #build venv 
+        logging.info("Installing packages from "+ cls.envFile)
+        buildCommand = "python -m pip install "+ cls.envFile
+        logging.info("Building with "+buildCommand+" ...")
+        os.system(buildCommand)
+        logging.info("Done")

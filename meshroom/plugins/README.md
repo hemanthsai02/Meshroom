@@ -1,6 +1,12 @@
+# Intro
+
+A plugin is a set of one or several nodes that are not part of the Meshroom/Alicevision main project.
+They are meant to facilitate the creation of custom pipeline, make distribution and installation of extra nodes easy, and allow the use of different level of isolation at the node level.
+Each node within a plugin may use the same environnement, or use different ones.
+
 # Making Meshroom Plugins
 
-To make a new plugin, make your node inheriting from `meshroom.core.plugins.CondaNode` or `meshroom.core.plugins.DockerNode`.
+To make a new plugin, make your node inheriting from `meshroom.core.plugins.PipNode`, `meshroom.core.plugins.CondaNode` or `meshroom.core.plugins.DockerNode`.
 In your new node class, overwrite the variable `envFile` to point to the environment file (e.g. the `yaml` or `dockerfile`) that sets up your installation. The path to this file should be relative to the path of the node, and within the same folder (or subsequent child folder) as the node definition.
 
 Prefixes will be added automatically to your command line to run the node in the right envireonnement.
@@ -13,7 +19,7 @@ By default, Meshroom will look for node definition in `[plugin folder]/meshroomN
 
 To modify this behavior, you may put a json file named `meshroomPlugin.json` at the root of your folder/repository.
 The file must have the following structure:
-`
+```
 [
 	{
 	"pluginName":"[YOUR_PLUGIN_NAME]",
@@ -25,7 +31,7 @@ The file must have the following structure:
     "nodesFolder":"dummy"
 	}
 ]
-`
+```
 
 The environment of the nodes are going to be build the first time it is needed (status will be 'BUILD', in purple) 
 

@@ -407,7 +407,7 @@ Item {
                     onPressed: function(event) {
                         const canEdit = !edge.dst.node.locked
 
-                        if (event.button === Qt.RightButton) {
+                        if (event.button == Qt.RightButton) {
                             if (canEdit && (event.modifiers & Qt.AltModifier)) {
                                 uigraph.removeEdge(edge)
                             } else {

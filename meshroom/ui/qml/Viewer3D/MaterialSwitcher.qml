@@ -92,16 +92,14 @@ Entity {
         objectName: "VertexColorMaterial"
     }
 
-    DiffuseSpecularMaterial {
+    MetalRoughMaterial {
         id: textured
         objectName: "TexturedMaterial"
-        ambient: root.ambient
-        shininess: root.shininess
-        specular: root.specular
-        diffuse: TextureLoader {
+        baseColor: TextureLoader {
             magnificationFilter: Texture.Linear
             mirrored: false
             source: diffuseMap
+            generateMipMaps: true
         }
     }
 

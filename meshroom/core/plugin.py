@@ -5,17 +5,15 @@
 This file defines the nodes and logic needed for the plugin system in meshroom.
 A plugin is a collection of node(s) of any type with their rutime environnement setup file attached.
 We use the term 'environement' to abstract a docker container or a conda/virtual environement.
-
 """
 
 import json
-import os
+import os, sys
 import logging
 import urllib
 from distutils.dir_util import copy_tree, remove_tree
-
-#NOTE: could replace with parsing to avoid dependancy to docker api
-import docker
+import subprocess 
+import venv
 
 from meshroom.core.node import Status
 from meshroom.core import desc, hashValue
@@ -105,11 +103,11 @@ def installPlugin(pluginUrl):
             if isLocal:
                 os.symlink(pluginParam.nodesFolder, intallFolder)
                 if os.path.isdir(pluginParam.pipelineFolder):
-                    os.symlink(pluginParam.pipelineFolder, pluginsPipelinesFolder)
+                    os.symlink(pluginParam.pipelineFolder, os.path.join(pluginsPipelinesFolder, pluginParam.pluginName))
             else:
                 copy_tree(pluginParam.nodesFolder, intallFolder)
                 if os.path.isdir(pluginParam.pipelineFolder):
-                    copy_tree(pluginParam.pipelineFolder, pluginsPipelinesFolder)
+                    copy_tree(pluginParam.pipelineFolder, os.path.join(pluginsPipelinesFolder, pluginParam.pluginName))
 
         #remove repo if was cloned
         if not isLocal:
@@ -119,7 +117,6 @@ def installPlugin(pluginUrl):
 
     except Exception as ex:
         logging.error(ex)
-        #TODO: remove install
         return False
         
     return True
@@ -197,7 +194,7 @@ class CondaNode(PluginNode):
         makeEnvCommand = (curateEnvCommand()
                             +" conda config --set channel_priority strict; "
                             +" conda env create --name "+cls._envName
-                            +" --file "+cls.envFile)
+                            +" --file "+cls.envFile+" ")
         logging.info("Building...")
         logging.info(makeEnvCommand)
         os.system(makeEnvCommand)
@@ -208,9 +205,11 @@ class CondaNode(PluginNode):
         #create the env if not built yet
         if not condaEnvExist(self._envName):
             self.build()
+        else:
+            logging.info("Reusing env "+self._envName)
 
         #add the prefix to the command line
-        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output "+self._envName
+        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output "+self._envName+" "
         cmdSuffix = ''
         if chunk.node.isParallelized and chunk.node.size > 1:
             cmdSuffix = ' ' + self.commandLineRange.format(**chunk.range.toDict())
@@ -218,7 +217,6 @@ class CondaNode(PluginNode):
 
     def processChunk(self, chunk):
         try:
-            chunk.logManager.start(chunk.node.verboseLevel.value)
             with open(chunk.logFile, 'w') as logF:
                 cmd = self.buildCommandLine(chunk)
                 chunk.status.commandLine = cmd
@@ -238,17 +236,30 @@ class CondaNode(PluginNode):
             raise
         chunk.logManager.end()
 
-def dockerImageExists(imageName):
-    """
-    Checks if an image exists with a given name
-    """
-    client = docker.from_env()
-    try:
-        client.images.get(imageName)
-        return True
-    except docker.errors.ImageNotFound:
-        return False
+# def dockerImageExists(imageName):
+#     """
+#     Checks if an image exists with a given name
+#     """
+#     client = docker.from_env()
+#     try:
+#         client.images.get(imageName)
+#         return True
+#     except docker.errors.ImageNotFound:
+#         return False
 
+def dockerImageExists(image_name, tag='latest'): 
+    try: 
+        result = subprocess.run( ['docker', 'images', image_name, '--format', '{{.Repository}}:{{.Tag}}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True )
+        if result.returncode != 0: 
+            return False 
+        #check if the desired image:tag exists 
+        images = result.stdout.splitlines() 
+        image_tag = f"{image_name}:{tag}" 
+        return image_tag in images 
+    except Exception as e: 
+        print(f"An error occurred: {e}") 
+        return False 
+        
 class DockerNode(PluginNode):
     """
     Node that build a docker container from a dockerfile and run all the commands in it.
@@ -280,7 +291,6 @@ class DockerNode(PluginNode):
 
     def processChunk(self, chunk):
         try:
-            chunk.logManager.start(chunk.node.verboseLevel.value)
             with open(chunk.logFile, 'w') as logF:
                 cmd = self.buildCommandLine(chunk)
                 chunk.status.commandLine = cmd
@@ -305,9 +315,52 @@ class PipNode(desc.Node):
     Node than runs in the same python as meshroom, but install extra packages first
     """
     def build(cls):
-        #build venv 
+        #install packages in the same python as meshroom
         logging.info("Installing packages from "+ cls.envFile)
-        buildCommand = "python -m pip install "+ cls.envFile
+        buildCommand = sys.executable+" -m pip install "+ cls.envFile
         logging.info("Building with "+buildCommand+" ...")
         os.system(buildCommand)
         logging.info("Done")
+
+def create_venv(venv_path):
+    """
+    Create venv and return python executable
+    """
+    #builder that saves context once built
+    class _EnvBuilder(venv.EnvBuilder):
+        def __init__(self, *args, **kwargs):
+            self.context = None
+            super().__init__(*args, **kwargs)
+        def post_setup(self, context):
+            self.context = context
+    venv_builder = _EnvBuilder(with_pip=True)
+    venv_builder.create(venv_path)
+    env_exe = venv_builder.context.env_exe
+    return env_exe
+
+class VenvNode(desc.CommandLineNode):
+    """
+    Node that build a python virtual env and install pip packages from a requirement.txt.
+    """
+    def build(cls):
+        """
+        Build a virtual env from a requirement.txt file-
+        """
+        logging.info("Creating virtual env "+os.path.join(defaultCacheFolder, cls._envName)+" from "+cls.envFile)
+        cls.env_exe = create_venv(os.path.join(defaultCacheFolder, cls._envName))
+        os.system(cls.env_exe+" -m pip install "+ cls.envFile)
+        logging.info("Done")
+        
+    def buildCommandLine(self, chunk):
+        cmdPrefix = ''
+        #create the env if not built yet
+        if not os.path.isdir(os.path.join(defaultCacheFolder, self._envName)):
+            self.build()
+
+        #add the prefix to the command line
+        cmdPrefix = "cls.env_exe "
+        cmdSuffix = ''
+        if chunk.node.isParallelized and chunk.node.size > 1:
+            cmdSuffix = ' ' + self.commandLineRange.format(**chunk.range.toDict())
+        return cmdPrefix + chunk.node.nodeDesc.commandLine.format(**chunk.node._cmdVars) + cmdSuffix
+

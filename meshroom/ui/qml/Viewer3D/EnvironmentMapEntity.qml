@@ -36,11 +36,8 @@ Entity {
             id: transform
             translation: root.position
         },
-        DiffuseMapMaterial {
-            ambient: "#FFF"
-            shininess: 0
-            specular: "#000"
-            diffuse: TextureLoader {
+        MetalRoughMaterial {
+            baseColor: TextureLoader {
                 id: textureLoader
                 magnificationFilter: Texture.Linear
                 mirrored: true

@@ -39,6 +39,9 @@ class PluginParams():
             if "pipelineFolder" in jsonData.keys():
                 self.pipelineFolder = os.path.join(pluginUrl, jsonData["pipelineFolder"])
 
+def _formatPluginName(pluginName):
+    return pluginName.replace(" ", "_")
+
 def installPlugin(pluginUrl):
     """
     Install plugin from an url or local path.
@@ -83,7 +86,7 @@ def installPlugin(pluginUrl):
         
         #for each plugin, run the 'install'
         for pluginParam in pluginParamList:
-            intallFolder = os.path.join(pluginsNodesFolder, pluginParam.pluginName)
+            intallFolder = os.path.join(pluginsNodesFolder, _formatPluginName(pluginParam.pluginName))
 
             logging.info("Installing "+pluginParam.pluginName+" from "+pluginUrl+" in "+intallFolder)
 
@@ -160,82 +163,6 @@ class PluginNode(desc.CommandLineNode):
     def buildCommandLine(self, chunk):
         raise RuntimeError("Virtual class must be overloaded")
 
-def curateEnvCommand():
-    """
-    Used to unset all rez defined env that messes up with conda.
-    """
-    cmd=""
-    for envVar in os.environ.keys():
-        if ((("py" in envVar) or  ("PY" in envVar)) 
-            and ("REZ" not in envVar) and ("." not in envVar) and ("-" not in envVar)):
-            if envVar.endswith("()"):
-                cmd+='unset -f '+envVar[10:-2]+'; '
-            else:
-                cmd+='unset '+envVar+'; '
-    return cmd
-
-def condaEnvExist(envName):
-    """
-    Checks if a specified env exists
-    """
-    cmd = "conda list --name "+envName
-    output = os.popen(cmd).read()
-    return not output.startswith("EnvironmentLocationNotFound")
-
-class CondaNode(PluginNode):
-    """
-    Node that build conda environement from a yaml file and run all the commands in it.
-    """
-    def build(cls):
-        """
-        Build a conda env from a yaml file
-        """
-        logging.info("Creating conda env "+cls._envName+" from "+cls.envFile)
-        makeEnvCommand = (curateEnvCommand()
-                            +" conda config --set channel_priority strict; "
-                            +" conda env create --name "+cls._envName
-                            +" --file "+cls.envFile+" ")
-        logging.info("Building...")
-        logging.info(makeEnvCommand)
-        os.system(makeEnvCommand)
-        logging.info("Done")
-        
-    def buildCommandLine(self, chunk):
-        cmdPrefix = ''
-        #create the env if not built yet
-        if not condaEnvExist(self._envName):
-            self.build()
-        else:
-            logging.info("Reusing env "+self._envName)
-
-        #add the prefix to the command line
-        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output "+self._envName+" "
-        cmdSuffix = ''
-        if chunk.node.isParallelized and chunk.node.size > 1:
-            cmdSuffix = ' ' + self.commandLineRange.format(**chunk.range.toDict())
-        return cmdPrefix + chunk.node.nodeDesc.commandLine.format(**chunk.node._cmdVars) + cmdSuffix
-
-    def processChunk(self, chunk):
-        try:
-            with open(chunk.logFile, 'w') as logF:
-                cmd = self.buildCommandLine(chunk)
-                chunk.status.commandLine = cmd
-                chunk.saveStatusFile()
-                print(' - commandLine: {}'.format(cmd))
-                print(' - logFile: {}'.format(chunk.logFile))
-                #unset doesnt work with subprocess, and removing the variables from the env dict does not work either
-                chunk.status.returnCode = os.system(cmd)
-                logContent=""
-
-            if chunk.status.returnCode != 0:
-                with open(chunk.logFile, 'r') as logF:
-                    logContent = ''.join(logF.readlines())
-                raise RuntimeError('Error on node "{}":\nLog:\n{}'.format(chunk.name, logContent))
-        except:
-            chunk.logManager.end()
-            raise
-        chunk.logManager.end()
-
 # def dockerImageExists(imageName):
 #     """
 #     Checks if an image exists with a given name
@@ -299,6 +226,87 @@ class DockerNode(PluginNode):
                 print(' - logFile: {}'.format(chunk.logFile))
                 #popen doesnt work with docker, also move to node folder is necessary
                 chunk.status.returnCode = os.system("cd "+chunk.node.internalFolder+" && "+cmd)
+                logContent=""
+
+            if chunk.status.returnCode != 0:
+                with open(chunk.logFile, 'r') as logF:
+                    logContent = ''.join(logF.readlines())
+                raise RuntimeError('Error on node "{}":\nLog:\n{}'.format(chunk.name, logContent))
+        except:
+            chunk.logManager.end()
+            raise
+        chunk.logManager.end()
+
+
+def curateEnvCommand():
+    """
+    Used to unset all rez defined env that messes up with conda.
+    """
+    cmd=""
+    for envVar in os.environ.keys():
+        if ((("py" in envVar) or  ("PY" in envVar)) 
+            and ("REZ" not in envVar) and ("." not in envVar) and ("-" not in envVar)):
+            if envVar.endswith("()"):
+                cmd+='unset -f '+envVar[10:-2]+'; '
+            else:
+                cmd+='unset '+envVar+'; '
+    return cmd
+
+def condaEnvExist(envName):
+    """
+    Checks if a specified env exists
+    """
+    cmd = "conda list --name "+envName
+    result = subprocess.run( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True )
+    return result.returncode == 0
+
+class CondaNode(PluginNode):
+    """
+    Node that build conda environement from a yaml file and run all the commands in it.
+    """
+    def build(cls):
+        """
+        Build a conda env from a yaml file
+        """
+        logging.info("Creating conda env "+cls._envName+" from "+cls.envFile)
+        makeEnvCommand = (curateEnvCommand()
+                            +" conda config --set channel_priority strict; "
+                            +" conda env create --name "+cls._envName
+                            +" --file "+cls.envFile+" ")
+        logging.info("Building...")
+        logging.info(makeEnvCommand)
+        return_status = os.system(makeEnvCommand)
+        if return_status != 0:
+            raise RuntimeError("Build failed!")
+        logging.info("Done")
+        
+    def buildCommandLine(self, chunk):
+        cmdPrefix = ''
+        #create the env if not built yet
+        if not condaEnvExist(self._envName):
+            chunk.upgradeStatusTo(Status.BUILD)
+            self.build()
+            chunk.upgradeStatusTo(Status.RUNNING)
+        else:
+            logging.info("Reusing env "+self._envName)
+
+        #add the prefix to the command line
+        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output "+self._envName+" "
+        cmdSuffix = ''
+        if chunk.node.isParallelized and chunk.node.size > 1:
+            cmdSuffix = ' ' + self.commandLineRange.format(**chunk.range.toDict())
+        return cmdPrefix + chunk.node.nodeDesc.commandLine.format(**chunk.node._cmdVars) + cmdSuffix
+
+    def processChunk(self, chunk):
+        try:
+            with open(chunk.logFile, 'w') as logF:
+                cmd = self.buildCommandLine(chunk)
+                chunk.status.commandLine = cmd
+                chunk.saveStatusFile()
+                print(' - commandLine: {}'.format(cmd))
+                print(' - logFile: {}'.format(chunk.logFile))
+                #unset doesnt work with subprocess, and removing the variables from the env dict does not work either
+                chunk.status.returnCode = os.system(cmd)
                 logContent=""
 
             if chunk.status.returnCode != 0:

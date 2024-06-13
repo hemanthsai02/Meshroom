@@ -6,7 +6,7 @@ Each node within a plugin may use the same environnement, or use different ones.
 
 # Making Meshroom Plugins
 
-To make a new plugin, make your node inheriting from `meshroom.core.plugins.PipNode`, `meshroom.core.plugins.CondaNode` or `meshroom.core.plugins.DockerNode`.
+To make a new plugin, make your node inheriting from `meshroom.core.plugins.PipNode`, `meshroom.core.plugins.VenvNode`, `meshroom.core.plugins.CondaNode` or `meshroom.core.plugins.DockerNode`.
 In your new node class, overwrite the variable `envFile` to point to the environment file (e.g. the `yaml` or `dockerfile`) that sets up your installation. The path to this file should be relative to the path of the node, and within the same folder (or subsequent child folder) as the node definition.
 
 Prefixes will be added automatically to your command line to run the node in the right envireonnement.
@@ -23,12 +23,12 @@ The file must have the following structure:
 [
 	{
 	"pluginName":"[YOUR_PLUGIN_NAME]",
-    "nodesFolder":"[YOUR_FOLDER_RELATIVE_TO_THE_ROOT_REPO_OR_FOLDER]
-    "pipelineFolder":"[YOUR_CUSTOM_PIEPILINE_FOLDER"
+        "nodesFolder":"[YOUR_FOLDER_RELATIVE_TO_THE_ROOT_REPO_OR_FOLDER],
+        "pipelineFolder":"[YOUR_CUSTOM_PIEPILINE_FOLDER"
 	},
 	{
 	"pluginName":"Dummy Plugin",
-    "nodesFolder":"dummy"
+        "nodesFolder":"dummy"
 	}
 ]
 ```

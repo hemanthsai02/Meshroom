@@ -103,7 +103,7 @@ FloatingPane {
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.MiddleButton
-        onWheel: wheel.accepted = true
+        onWheel: function(wheel) { wheel.accepted = true }
     }
 
     // Main Layout
@@ -174,7 +174,7 @@ FloatingPane {
                 sortRole: "raw"
                 filters: [{role: "raw", value: searchBar.text}]
                 delegate: RowLayout {
-                    width: parent ? parent.width : 0
+                    width: ListView.view.width
                     Label {
                         text: key
                         leftPadding: 6

@@ -257,8 +257,10 @@ def condaEnvExist(envName):
     Checks if a specified env exists
     """
     cmd = "conda list --name "+envName
-    result = subprocess.run( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True )
-    return result.returncode == 0
+    #result = subprocess.run( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True )
+    #return result.returncode == 0
+    return os.system(cmd) == 0
+    
 
 class CondaNode(PluginNode):
     """
@@ -291,7 +293,7 @@ class CondaNode(PluginNode):
             logging.info("Reusing env "+self._envName)
 
         #add the prefix to the command line
-        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output "+self._envName+" "
+        cmdPrefix = curateEnvCommand()+" conda run --no-capture-output -n "+self._envName+" "
         cmdSuffix = ''
         if chunk.node.isParallelized and chunk.node.size > 1:
             cmdSuffix = ' ' + self.commandLineRange.format(**chunk.range.toDict())

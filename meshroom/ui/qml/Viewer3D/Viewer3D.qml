@@ -109,15 +109,6 @@ FocusScope {
                 upVector: defaultCamUpVector
                 viewCenter: defaultCamViewCenter
                 aspectRatio: width/height
-
-                // Scene light, attached to the camera
-                Entity {
-                    components: [
-                        PointLight {
-                            color: "white"
-                        }
-                    ]
-                }
             }
 
             ViewpointCamera {
@@ -125,6 +116,15 @@ FocusScope {
                 enabled: cameraSelector.camera === camera
                 viewpoint: root.viewpoint
                 camera.aspectRatio: width/height
+            }
+
+            Entity {
+                components: [
+                    DirectionalLight{
+                        color: "white"
+                        worldDirection: Transformations3DHelper.getRotatedCameraViewVector(cameraSelector.camera.viewVector, cameraSelector.camera.upVector, directionalLightPane.lightPitchValue, directionalLightPane.lightYawValue).normalized()
+                    }
+                ]
             }
 
             TrackballGizmo {
@@ -328,6 +328,17 @@ FocusScope {
                 }
             }
         }
+    }
+
+    // Directional light controller
+    DirectionalLightPane {
+        id: directionalLightPane
+        anchors {
+            bottom: parent.bottom
+            right: parent.right
+            margins: 2
+        }
+        visible: Viewer3DSettings.displayLightController
     }
 
     // Menu

@@ -25,7 +25,7 @@ Panel {
     readonly property int centerViewId: (_reconstruction && _reconstruction.sfmTransform) ? parseInt(_reconstruction.sfmTransform.attribute("transformation").value) : 0
     readonly property alias galleryGrid: grid
 
-    property int defaultCellSize: 160
+    property int defaultCellSize: 150
     property bool readOnly: false
 
     property var filesByType: {}

@@ -163,16 +163,38 @@ class PluginNode(desc.CommandLineNode):
     def buildCommandLine(self, chunk):
         raise RuntimeError("Virtual class must be overloaded")
 
-# def dockerImageExists(imageName):
-#     """
-#     Checks if an image exists with a given name
-#     """
-#     client = docker.from_env()
-#     try:
-#         client.images.get(imageName)
-#         return True
-#     except docker.errors.ImageNotFound:
-#         return False
+    @property
+    def pythonProcessChunk(cls, args):
+        raise RuntimeError("pythonProcessChunk must be overloaded")
+
+    def autoPythonCommandLine(self, chunk):
+        """
+        creates the command line automatically from the node parameters and the code in pythonProcessChunk
+        """
+        #creates file with arguments and argparse
+        clFilePath = os.path.join(chunk.node.internalFolder, "commandLine.py")
+        with open(clFilePath, "w") as clFile:
+            clFile.write("import argparse\nparser = argparse.ArgumentParser()\n")
+            for attribute in chunk.node.attributes:
+                print(attribute)
+                if attribute.attributeDesc.group != "":
+                    if attribute.baseType == 'IntParam':
+                        clFile.write("parser.add_argument('--"+attribute.name+"', type=int)\n")
+                    elif attribute.baseType == 'FloatParam':
+                        clFile.write("parser.add_argument('--"+attribute.name+"', type=float)\n")
+                    elif attribute.baseType == 'BoolParam':
+                        clFile.write("parser.add_argument('--"+attribute.name+"', type=bool)\n")
+                    else:
+                        clFile.write("parser.add_argument('--"+attribute.name+"')\n")
+            clFile.write("args = parser.parse_args()\n\n")
+            #copy the code in pythonProcessChunk
+            import inspect
+            from textwrap import dedent
+            process_code = "".join(inspect.getsourcelines(self.pythonProcessChunk)[0][1:])
+            clFile.write(dedent(process_code))
+            
+        #overide command line
+        self.commandLine="python "+clFilePath+" {allParams}"
 
 def dockerImageExists(image_name, tag='latest'): 
     try: 
@@ -283,6 +305,13 @@ class CondaNode(PluginNode):
         logging.info("Done")
         
     def buildCommandLine(self, chunk):
+
+        print("-----")
+        if chunk.node.nodeDesc.commandLine == "":
+            self.autoPythonCommandLine(chunk)
+            print(self.commandLine)
+        print("-----")
+
         cmdPrefix = ''
         #create the env if not built yet
         if not condaEnvExist(self._envName):

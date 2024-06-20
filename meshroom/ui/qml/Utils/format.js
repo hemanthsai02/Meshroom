@@ -68,3 +68,39 @@ function sec2timeStr(timeSeconds) {
     }
     return timeStr
 }
+
+function GB2GBMBKB(GB) {
+    // Convert GB to GB, MB, KB
+    var GBInt = Math.floor(GB)
+    var MB = Math.floor((GB - GBInt) * 1024)
+    var KB = Math.floor(((GB - GBInt) * 1024 - MB) * 1024)
+    return {
+        GB: GBInt,
+        MB: MB,
+        KB: KB
+    }
+}
+
+function GB2SizeStr(GB) {
+    // Convert GB to a human readable size string
+    // e.g. 1.23GB, 456MB, 789KB
+    // We only use one unit at a time
+    var sizeObj = GB2GBMBKB(GB)
+    var sizeStr = ""
+    if (sizeObj.GB > 0) {
+        sizeStr += sizeObj.GB
+        if (sizeObj.MB > 0) {
+            sizeStr += "." + sizeObj.MB
+        }
+        sizeStr += "GB"
+    } else if (sizeObj.MB > 0) {
+        sizeStr = sizeObj.MB
+        if (sizeObj.KB > 0) {
+            sizeStr += "." + sizeObj.KB
+        }
+        sizeStr += "MB"
+    }else if(sizeObj.GB === 0 && sizeObj.MB === 0) {
+        sizeStr += sizeObj.KB + "KB"
+    }
+    return sizeStr
+}

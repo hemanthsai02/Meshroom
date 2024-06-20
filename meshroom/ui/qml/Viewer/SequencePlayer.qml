@@ -481,13 +481,15 @@ FloatingPane {
                             ProgressBar {
                                 id: occupiedCacheProgressBar
 
+                                property string occupiedCache: viewer.ramInfo.y ? Format.GB2SizeStr(viewer.ramInfo.y) : 0
+
                                 width: parent.width
 
                                 from: 0
                                 to: settings_SequencePlayer.maxCacheMemory
                                 value: viewer.ramInfo.y
 
-                                ToolTip.text: "Occupied cache: "+ viewer.ramInfo.y + " GB" + "\n" +"On max cache memory set: " + settings_SequencePlayer.maxCacheMemory + " GB"
+                                ToolTip.text: "Occupied cache: "+ occupiedCache + "\n" +"On max cache memory set: " + settings_SequencePlayer.maxCacheMemory + " GB"
                                 ToolTip.visible: hovered
                                 ToolTip.delay: 100
                             }
